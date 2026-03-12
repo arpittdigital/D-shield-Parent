@@ -42,6 +42,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.d_shield_parent.Dashboard.viewModel.CustomerViewModel
 import com.d_shield_parent.R
 import com.d_shield_parent.RoomDatabase.addCustomerList
+import com.d_shield_parent.navigation.Routes
 import com.d_shield_parent.viewModel.DocumentViewModel
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions

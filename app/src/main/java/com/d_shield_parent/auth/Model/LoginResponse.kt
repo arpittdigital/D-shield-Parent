@@ -1,7 +1,5 @@
 package com.d_shield_parent.auth.Model
 
-import com.google.gson.annotations.SerializedName
-
 
 interface BaseLoginResponse {
     val success: Boolean

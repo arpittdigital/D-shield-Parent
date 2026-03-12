@@ -6,7 +6,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.d_shield_parent.Api.RetrofitClient
 import com.d_shield_parent.SharedPreference.shareprefManager
-import com.d_shield_parent.auth.Model.BaseLoginResponse
 import com.d_shield_parent.auth.Model.DistributorLoginRequest
 import com.d_shield_parent.auth.Model.LoginRequest
 import kotlinx.coroutines.flow.MutableStateFlow

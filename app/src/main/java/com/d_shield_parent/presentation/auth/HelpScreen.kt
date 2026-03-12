@@ -256,18 +256,18 @@ fun HelpScreen(navController: NavController) {
 
                 Spacer(Modifier.width(20.dp))
 
-//                // Instagram
-//                SocialIcon(
-//                    iconColor = Color(0xFF833AB4),
-//                    iconRes = R.drawable.instagramimg,
-//                    onClick = {
-//                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(instagramUrl)))
-//                    }
-//                )
+                // Instagram
+                SocialIcon(
+                    iconColor = Color(0xFF833AB4),
+                    iconRes = R.drawable.instagramimg,
+                    onClick = {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(instagramUrl)))
+                    }
+                )
 
                 Spacer(Modifier.width(20.dp))
 
-//                // YouTube
+                // YouTube
 //                SocialIcon(
 //                    iconRes = R.drawable.ic_youtube,
 //                    onClick = {

@@ -1,6 +1,6 @@
 package com.d_shield_parent
 
-import NavGraph
+import com.d_shield_parent.navigation.NavGraph
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
+import com.d_shield_parent.navigation.Routes
 import com.d_shield_parent.ui.theme.DshieldParentTheme
 
 class MainActivity : ComponentActivity() {

@@ -35,7 +35,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     val profileData: StateFlow<ProfileData> = _profileData.asStateFlow()
 
     private val _isEditable = MutableStateFlow(false)
-    val isEditable: StateFlow<Boolean> = _isEditable.asStateFlow()
 
     private val _isLoggingOut = MutableStateFlow(false)
     val isLoggingOut: StateFlow<Boolean> = _isLoggingOut.asStateFlow()
@@ -64,6 +63,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     }
     fun updateShopName(shopName: String) {
         _profileData.value = _profileData.value.copy(shop_name = shopName)
+    }
+    fun enableEdit() {
+        _isEditable.value = true
     }
 
 
@@ -97,11 +99,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         Log.d(TAG, "Profile saved locally")
     }
 
-    fun cancelEdit() {
-        _isEditable.value = false
-        // Reload original data
-        fetchProfile()
-    }
+
 
     // ✅ Show logout confirmation dialog
     fun showLogoutConfirmation() {

@@ -2,6 +2,7 @@ package com.d_shield_parent.Dashboard
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,7 +28,7 @@ import com.d_shield_parent.Dashboard.model.InstallmentItem
 import com.d_shield_parent.Dashboard.viewModel.CustomerListState
 import com.d_shield_parent.Dashboard.viewModel.CustomerListViewModel
 import com.d_shield_parent.Dashboard.viewModel.EMIScheduleState
-import com.d_shield_parent.R
+import com.d_shield_parent.navigation.Routes
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -230,11 +231,11 @@ fun CustomerItem(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            modifier = Modifier.size(50.dp),
-                            painter = painterResource(id = R.drawable.placeholder),
-                            contentDescription = null
-                        )
+//                        Image(
+//                            modifier = Modifier.size(50.dp),
+//                            painter = painterResource(id = R.drawable.placeholder),
+//                            contentDescription = null
+//                        )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
@@ -253,11 +254,11 @@ fun CustomerItem(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            modifier = Modifier.size(40.dp),
-                            painter = painterResource(R.drawable.mobileimg),
-                            contentDescription = null
-                        )
+//                        Image(
+//                            modifier = Modifier.size(40.dp),
+//                            painter = painterResource(R.drawable.mobileimg),
+//                            contentDescription = null
+//                        )
                         Spacer(modifier = Modifier.width(12.dp))
                         Icon(
                             modifier = Modifier

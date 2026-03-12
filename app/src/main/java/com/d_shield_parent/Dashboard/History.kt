@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.wear.compose.material.Colors
 import com.d_shield_parent.Dashboard.viewModel.HistoryListState
 import com.d_shield_parent.Dashboard.viewModel.HistoryViewModel
 

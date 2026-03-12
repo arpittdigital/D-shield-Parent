@@ -6,9 +6,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.d_shield_parent.Api.RetrofitClient
-import com.d_shield_parent.Dashboard.model.getDeviceResponse
 import com.d_shield_parent.Dashboard.model.historyResponse
-import com.d_shield_parent.Dashboard.viewModel.CustomerListState
 import com.d_shield_parent.SharedPreference.shareprefManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

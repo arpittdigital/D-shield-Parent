@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import com.d_shield_parent.Dashboard.AppColors
 import com.d_shield_parent.Dashboard.ProfileViewModel
 import com.d_shield_parent.R
 import kotlinx.coroutines.delay
@@ -67,11 +66,11 @@ fun HomeScreen(
 
     val serviceItems = listOf(
         ServiceItem("Add Customer",  Icons.Default.PersonAdd,             Gold,              Color(0xFFFFF8E1), "add_customer_screen"),
-        ServiceItem("Customer List", Icons.Default.People,                Color(0xFF5B8DCA), Color(0xFFE8F0FA), "customer_list_screen"),
-        ServiceItem("Profile",       Icons.Default.Person,                Color(0xFF7B6EAA), Color(0xFFF0ECFA), "profile_screen"),
-        ServiceItem("Service",       Icons.Default.MiscellaneousServices, Color(0xFF43A891), Color(0xFFE4F6F3), "service_screen"),
+//       ServiceItem("Customer List", Icons.Default.People,                Color(0xFF5B8DCA), Color(0xFFE8F0FA), "customer_list_screen"),
+//        ServiceItem("Profile",       Icons.Default.Person,                Color(0xFF7B6EAA), Color(0xFFF0ECFA), "profile_screen"),
+//        ServiceItem("Service",       Icons.Default.MiscellaneousServices, Color(0xFF43A891), Color(0xFFE4F6F3), "service_screen"),
         ServiceItem("Help",          Icons.Default.Help,                  Color(0xFFE07B3A), Color(0xFFFEF0E6), "help_screen"),
-        ServiceItem("Setup M-Pin",   Icons.Default.Lock,                  Color(0xFFCFA849), Color(0xFFFFF8E1), "setup_mpin_screen"),
+//        ServiceItem("Setup M-Pin",   Icons.Default.Lock,                  Color(0xFFCFA849), Color(0xFFFFF8E1), "setup_mpin_screen"),
     )
 
     Box(
@@ -83,7 +82,7 @@ fun HomeScreen(
         Column(modifier = Modifier.fillMaxWidth()) {
 
             AnimatedHeader(
-                username         = profileData.username,
+                username         = profileData.shop_name,
                 profileImageUri  = profileData.profileImageUri,
                 onProfileClick   = { navController.navigate("profile_screen") }
             )
@@ -119,15 +118,7 @@ fun HomeScreen(
                     fontWeight = FontWeight.ExtraBold,
                     color      = TextPrimary
                 )
-                Spacer(modifier = Modifier.weight(1f))
-                Box(
-                    modifier = Modifier
-                        .background(GoldLight, RoundedCornerShape(8.dp))
-                        .border(1.dp, Gold.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 12.dp, vertical = 5.dp)
-                ) {
-                    Text("View All", fontSize = 11.sp, color = GoldDim, fontWeight = FontWeight.SemiBold)
-                }
+
             }
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -249,22 +240,22 @@ private fun AnimatedHeader(
                 }
 
                 // Notification Bell
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .background(GoldLight, RoundedCornerShape(13.dp))
-                        .border(1.dp, Gold.copy(alpha = 0.5f), RoundedCornerShape(13.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Notifications, null, tint = Gold, modifier = Modifier.size(22.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(Color(0xFFFF3B3B), CircleShape)
-                            .align(Alignment.TopEnd)
-                            .offset(x = (-4).dp, y = 4.dp)
-                    )
-                }
+//                Box(
+//                    modifier = Modifier
+//                        .size(44.dp)
+//                        .background(GoldLight, RoundedCornerShape(13.dp))
+//                        .border(1.dp, Gold.copy(alpha = 0.5f), RoundedCornerShape(13.dp)),
+//                    contentAlignment = Alignment.Center
+//                ) {
+//                    Icon(Icons.Default.Notifications, null, tint = Gold, modifier = Modifier.size(22.dp))
+//                    Box(
+//                        modifier = Modifier
+//                            .size(8.dp)
+//                            .background(Color(0xFFFF3B3B), CircleShape)
+//                            .align(Alignment.TopEnd)
+//                            .offset(x = (-4).dp, y = 4.dp)
+//                    )
+//                }
             }
         }
     }

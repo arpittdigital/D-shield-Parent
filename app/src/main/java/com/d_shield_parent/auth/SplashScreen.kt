@@ -1,6 +1,5 @@
 package com.d_shield_parent.auth
 
-import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -23,6 +22,7 @@ import androidx.navigation.NavController
 import com.d_shield_parent.Dashboard.AppColors
 import com.d_shield_parent.R
 import com.d_shield_parent.SharedPreference.shareprefManager
+import com.d_shield_parent.navigation.Routes
 import kotlinx.coroutines.delay
 
 @Composable

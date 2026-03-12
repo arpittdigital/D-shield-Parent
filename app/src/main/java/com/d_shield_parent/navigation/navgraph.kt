@@ -1,3 +1,5 @@
+package com.d_shield_parent.navigation
+
 import android.annotation.SuppressLint
 import android.app.Application
 import androidx.compose.runtime.Composable
@@ -35,7 +37,7 @@ sealed class Routes(val route: String) {
     object AddCustomer : Routes("add_customer_screen")
 
     object QrScanner : Routes("qr_screen/{deviceId}") {
-        fun createRoute(deviceId: Int) = "qr_screen/$deviceId"  // ✅ Add this help
+        fun createRoute(deviceId: Int) = "qr_screen/$deviceId"  // Add this help
     }
 
     object CustomerList : Routes("customer_list_screen")

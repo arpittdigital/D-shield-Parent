@@ -14,7 +14,6 @@ import com.d_shield_parent.Dashboard.model.updateRequest
 import com.d_shield_parent.Profile.model.LogoutResponse
 import com.d_shield_parent.Profile.model.ProfileResponse
 import com.d_shield_parent.Profile.model.ProfileUpdateResponse
-import com.d_shield_parent.Profile.model.UpdateProfileRequest
 import com.d_shield_parent.auth.Model.DistributorLoginRequest
 import com.d_shield_parent.auth.Model.DistributorResponse
 import com.d_shield_parent.auth.Model.LoginRequest
