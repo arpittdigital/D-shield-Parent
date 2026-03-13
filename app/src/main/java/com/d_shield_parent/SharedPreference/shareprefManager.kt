@@ -10,6 +10,7 @@ object shareprefManager {
     private const val KEY_TOKEN = "auth_token"
     private const val KEY_USER_ROLE = "user_role"
     private const val KEY_USER_TYPE = "user_Type"
+    private const val KEY_PHONE = "user_phone"
 
     private lateinit var prefs: SharedPreferences
 
@@ -17,12 +18,17 @@ object shareprefManager {
         prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
     }
 
-    fun saveLogin(token: String, role: String, userType: String) {
+    fun saveLogin(token: String, role: String, userType: String, phone: String) {
         prefs.edit()
             .putString(KEY_TOKEN, token)
             .putString(KEY_USER_ROLE, role)
             .putString(KEY_USER_TYPE, userType)
+            .putString(KEY_PHONE, phone)
             .apply()
+    }
+
+    fun getPhone(): String? {
+        return prefs.getString(KEY_PHONE, null)
     }
 
     fun getToken(): String? {

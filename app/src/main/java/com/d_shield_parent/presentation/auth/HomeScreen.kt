@@ -2,6 +2,8 @@ package com.d_shield_parent.presentation.auth
 
 import androidx.compose.animation.core.*
 import androidx.compose.animation.*
+import androidx.activity.compose.BackHandler
+import android.app.Activity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,6 +24,7 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -57,20 +60,25 @@ data class ServiceItem(
     val route: String
 )
 
+
 @Composable
 fun HomeScreen(
     navController: NavController,
     viewModel: ProfileViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    BackHandler {
+        (context as? Activity)?.finish()
+    }
     val profileData by viewModel.profileData.collectAsState()
 
     val serviceItems = listOf(
         ServiceItem("Add Customer",  Icons.Default.PersonAdd,             Gold,              Color(0xFFFFF8E1), "add_customer_screen"),
-//       ServiceItem("Customer List", Icons.Default.People,                Color(0xFF5B8DCA), Color(0xFFE8F0FA), "customer_list_screen"),
+      ServiceItem("Customer List", Icons.Default.People,                Color(0xFF5B8DCA), Color(0xFFE8F0FA), "customer_list_screen"),
 //        ServiceItem("Profile",       Icons.Default.Person,                Color(0xFF7B6EAA), Color(0xFFF0ECFA), "profile_screen"),
-//        ServiceItem("Service",       Icons.Default.MiscellaneousServices, Color(0xFF43A891), Color(0xFFE4F6F3), "service_screen"),
+        ServiceItem("Service",       Icons.Default.MiscellaneousServices, Color(0xFF43A891), Color(0xFFE4F6F3), "service_screen"),
         ServiceItem("Help",          Icons.Default.Help,                  Color(0xFFE07B3A), Color(0xFFFEF0E6), "help_screen"),
-//        ServiceItem("Setup M-Pin",   Icons.Default.Lock,                  Color(0xFFCFA849), Color(0xFFFFF8E1), "setup_mpin_screen"),
+        ServiceItem("Setup M-Pin",   Icons.Default.Lock,                  Color(0xFFCFA849), Color(0xFFFFF8E1), "setup_mpin_screen"),
     )
 
     Box(
@@ -84,7 +92,7 @@ fun HomeScreen(
             AnimatedHeader(
                 username         = profileData.shop_name,
                 profileImageUri  = profileData.profileImageUri,
-                onProfileClick   = { navController.navigate("profile_screen") }
+           onProfileClick   = {  }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -138,7 +146,12 @@ fun HomeScreen(
                                 item           = item,
                                 animationIndex = rowIndex * 2 + colIndex,
                                 modifier       = Modifier.weight(1f),
-                                onClick        = { navController.navigate(item.route) }
+                                onClick = {
+                                    navController.navigate(item.route) {
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
                             )
                         }
                         if (rowItems.size == 1) Spacer(modifier = Modifier.weight(1f))
@@ -416,7 +429,7 @@ private fun AnimatedServiceCard(
     onClick: () -> Unit
 ) {
     var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(400L + animationIndex * 80L); visible = true }
+    LaunchedEffect(Unit) { visible = true }
 
     val interactionSource = remember { MutableInteractionSource() }
 

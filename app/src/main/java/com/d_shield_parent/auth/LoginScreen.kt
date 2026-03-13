@@ -183,7 +183,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         // Login Method Toggle
-        if (uiState.selectedUserType == UserType.DISTRIBUTOR) {
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
@@ -212,7 +212,7 @@ fun LoginScreen(
                     )
                 }
             }
-        }
+
 
         Spacer(modifier = Modifier.height(16.dp))
 

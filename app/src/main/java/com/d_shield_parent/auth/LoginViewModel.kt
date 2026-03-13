@@ -125,7 +125,8 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                             shareprefManager.saveLogin(
                                 token = body.token ?: "",
                                 role = body.role,
-                                userType = "RETAILER"
+                                userType = "RETAILER",
+                                phone = uiState.value.phoneNumber
                             )
                             Log.d("LoginViewModel", "✅ Retailer login success → dashboard_screen")
                             _uiState.update {
@@ -153,7 +154,8 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                             shareprefManager.saveLogin(
                                 token = body.token ?: "",
                                 role = body.role,
-                                userType = "DISTRIBUTOR"
+                                userType = "DISTRIBUTOR",
+                                phone = uiState.value.phoneNumber
                             )
                             Log.d("LoginViewModel", "✅ Distributor login success → distributor_dashboard_screen")
                             _uiState.update {

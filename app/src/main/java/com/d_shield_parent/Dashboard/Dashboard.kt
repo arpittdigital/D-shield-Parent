@@ -70,9 +70,9 @@ fun MainScreen(navController: NavController) {
                 when (selectedIndex.value) {
                     0 -> HomeScreen(navController = navController)
                     1 -> ListScreen(navController = navController)
-                    2 -> ServiceScreen(navController = navController)
-                    3 -> HistoryScreen(navController = navController)
-                    4 -> ProfileScreen(navController = navController)
+//                    2 -> ServiceScreen(navController = navController)
+                    2 -> HistoryScreen(navController = navController)
+                    3 -> ProfileScreen(navController = navController)
                 }
             }
         }
@@ -97,7 +97,7 @@ fun BottomNavBar(
         listOf(
             navItem.Home,
             navItem.List,
-            navItem.Service,
+//         navItem.Service,
             navItem.History,
             navItem.Profile
         )
