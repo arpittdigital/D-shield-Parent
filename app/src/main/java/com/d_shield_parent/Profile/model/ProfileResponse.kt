@@ -10,7 +10,8 @@ data class ProfileDataResponse(
     val wallet_balance: String?,
     val enrolled_devices: Int?,
     val active_devices: Int?,
-    val locked_devices: Int?
+    val locked_devices: Int?,
+    val points: Int?
 )
 
 data class Retailer(
@@ -31,7 +32,7 @@ data class Retailer(
     val profile_pic: String?,
     val signature: String?,
     val status: String?,
-    val points: String?,
+    val points: Int?,
     val performed_by_id: String?,
     val performed_by_class: String?,
     val distributor_id: String?,

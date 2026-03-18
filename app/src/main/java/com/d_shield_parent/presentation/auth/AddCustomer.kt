@@ -1,18 +1,21 @@
-
 package com.d_shield_parent.Dashboard
 
 import android.Manifest
 import android.app.DatePickerDialog
 import android.content.Context
+import android.content.IntentFilter
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -26,6 +29,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -33,34 +37,83 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.d_shield_parent.Dashboard.viewModel.AddCustomerViewModel
 import com.d_shield_parent.Dashboard.viewModel.CustomerViewModel
 import com.d_shield_parent.R
 import com.d_shield_parent.RoomDatabase.addCustomerList
 import com.d_shield_parent.navigation.Routes
+import com.d_shield_parent.otp.SmsBroadcastReceiver
 import com.d_shield_parent.viewModel.DocumentViewModel
+import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import java.text.SimpleDateFormat
 import java.util.*
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AddCustomerFlow(navController: NavController) {
+
+    val viewModel: AddCustomerViewModel = viewModel()
+    val context = LocalContext.current  // ✅ Add this
+
+    //  Add SMS Receiver
+    val smsReceiver = remember { SmsBroadcastReceiver() }
+
+    //  Register/Unregister SMS Receiver
+    DisposableEffect(Unit) {
+        val filter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
+
+        // ✅ Use ContextCompat — fixes lint warning on all API levels
+        ContextCompat.registerReceiver(
+            context,
+            smsReceiver,
+            filter,
+            ContextCompat.RECEIVER_EXPORTED  // SMS comes from Google Play Services (external)
+        )
+
+        onDispose {
+            context.unregisterReceiver(smsReceiver)
+        }
+    }
+
+
+        //  Start SMS Retriever when OTP is sent + auto-fill OTP
+    LaunchedEffect(viewModel.isOtpSent) {
+        if (viewModel.isOtpSent) {
+            SmsRetriever.getClient(context).startSmsRetriever()
+
+            smsReceiver.otpReceiveListener = object : SmsBroadcastReceiver.OtpReceiveListener {
+                override fun onOtpReceived(receivedOtp: String) {
+
+                    viewModel.otp = receivedOtp //  Syncs to ViewModel
+                }
+                override fun onOtpTimeout() {
+                    // Optional: show resend option
+                }
+            }
+        }
+    }
+//    LaunchedEffect(viewModel.otp) {
+//        otp = viewModel.otp
+//    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (!isGranted) {
-            // Handle permission denied
-        }
+        if (!isGranted) { }
     }
 
+    // ... rest of your existing code unchanged
     LaunchedEffect(Unit) {
         permissionLauncher.launch(Manifest.permission.CAMERA)
     }
@@ -92,6 +145,7 @@ fun AddCustomerFlow(navController: NavController) {
     var firstInstallment by remember { mutableStateOf("") }
     var billingInvoice by remember { mutableStateOf("") }
     var emiDates by remember { mutableStateOf(listOf<String>()) }
+    var showValidationError by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().background(AppColors.PrimaryDark)) {
         Spacer(modifier = Modifier.height(25.dp))
@@ -119,7 +173,6 @@ fun AddCustomerFlow(navController: NavController) {
             )
         }
 
-        // Progress Indicator
         LinearProgressIndicator(
             progress = (currentPage + 1) / 3f,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).height(4.dp),
@@ -129,17 +182,21 @@ fun AddCustomerFlow(navController: NavController) {
 
         when (currentPage) {
             0 -> CustomerDetailsPage(
-                name, { name = it }, mobile, { mobile = it }, otp, { otp = it },
-                email, { email = it }, aadharCard, { aadharCard = it },
-                address, { address = it }, pancard, { pancard = it }, alternate, { alternate = it },
-                { currentPage = 1 }
+                name = name, onNameChange = { name = it },
+                email = email, onEmailChange = { email = it },
+                aadharCard = aadharCard, onAadharCardChange = { aadharCard = it },
+                address = address, onAddressChange = { address = it },
+                pancard = pancard, onPanCardChange = { pancard = it },
+                alternate = alternate, onAlternateChange = { alternate = it },
+                vm = viewModel,             // ✅ Pass AddCustomerViewModel
+                onNext = { currentPage = 1 }
             )
             1 -> ProductDetailsPage(
                 productName, { productName = it },
                 serialNumber, { serialNumber = it },
                 imei1, { imei1 = it },
                 imei2, { imei2 = it },
-                emiDay,{emiDay = it},
+                emiDay, { emiDay = it },
                 totalAmount, { totalAmount = it },
                 downPayment, { downPayment = it },
                 loanAmount, { loanAmount = it },
@@ -157,7 +214,7 @@ fun AddCustomerFlow(navController: NavController) {
             )
             2 -> UploadDocumentPage(
                 name, mobile, email,
-                aadharCard, address, pancard, alternate, productName, imei1, imei2, totalAmount,emiDay,
+                aadharCard, address, pancard, alternate, productName, imei1, imei2, totalAmount, emiDay,
                 loanAmount, loanFrequency, rateOfInterest, agreementDate, firstInstallment,
                 downPayment, billingInvoice, totalInstallment, emiDates, monthlyInstallment,
                 { currentPage = 1 }, navController
@@ -177,9 +234,8 @@ fun calculateEMIDetails(
     val rate = rateOfInterest.toDoubleOrNull() ?: 0.0
     val installments = totalInstallments.toIntOrNull() ?: 0
 
-    if (price <= 0 || installments <= 0) {
-        return EMICalculation()
-    }
+    if (price <= 0 || installments <= 0) return EMICalculation()
+
     val loanAmount = price - down
     val interestAmount = (loanAmount * rate) / 100
     val totalAmountWithInterest = loanAmount + interestAmount
@@ -202,73 +258,61 @@ data class EMICalculation(
 
 fun generateEmiDates(firstDate: String, totalInstallments: Int): List<String> {
     if (firstDate.isEmpty() || totalInstallments <= 0) return emptyList()
-
     val dateFormat = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
     val calendar = Calendar.getInstance()
-
     try {
         calendar.time = dateFormat.parse(firstDate) ?: return emptyList()
     } catch (e: Exception) {
         return emptyList()
     }
-
     val dates = mutableListOf<String>()
     dates.add(firstDate)
-
     for (i in 1 until totalInstallments) {
         calendar.add(Calendar.MONTH, 1)
         dates.add(dateFormat.format(calendar.time))
     }
-
     return dates
 }
+
+// ─── Page 1: Customer Details ─────────────────────────────────────────────────
 
 @Composable
 fun CustomerDetailsPage(
     name: String, onNameChange: (String) -> Unit,
-    mobile: String, onMobileChange: (String) -> Unit,
-    otp: String, onOTPChange: (String) -> Unit,
     email: String, onEmailChange: (String) -> Unit,
     aadharCard: String, onAadharCardChange: (String) -> Unit,
     address: String, onAddressChange: (String) -> Unit,
     pancard: String, onPanCardChange: (String) -> Unit,
     alternate: String, onAlternateChange: (String) -> Unit,
-    onContinue: () -> Unit
+    vm: AddCustomerViewModel,   // ✅ Pass AddCustomerViewModel directly
+    onNext: () -> Unit
 ) {
     var showValidationError by remember { mutableStateOf(false) }
     var validationMessage by remember { mutableStateOf("") }
+    // ❌ Removed: val vm: OtpViewModel = viewModel()
 
     fun validateFields(): Boolean {
         return when {
-            name.isBlank() -> {
-                validationMessage = "Please enter customer name"
-                false
-            }
-            mobile.length != 10 -> {
-                validationMessage = "Please enter valid 10-digit mobile number"
-                false
-            }
+            name.isBlank() -> { validationMessage = "Please enter customer name"; false }
+            vm.mobile.length != 10 -> { validationMessage = "Please enter valid 10-digit mobile number"; false }
+            !vm.isOtpVerified -> { validationMessage = "Please verify your mobile number"; false }
             email.isNotBlank() && !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
-                validationMessage = "Please enter valid email address"
-                false
+                validationMessage = "Please enter valid email address"; false
             }
             aadharCard.isNotBlank() && aadharCard.length != 12 -> {
-                validationMessage = "Aadhaar number must be 12 digits"
-                false
+                validationMessage = "Aadhaar number must be 12 digits"; false
             }
-            address.isBlank() -> {
-                validationMessage = "Please enter address"
-                false
-            }
-
-
+            address.isBlank() -> { validationMessage = "Please enter address"; false }
             else -> true
         }
     }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Box(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 15.dp).height(180.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 15.dp, vertical = 15.dp)
+                .height(180.dp)
                 .background(Color(0xFFE8F5E9)),
             contentAlignment = Alignment.Center
         ) {
@@ -278,32 +322,173 @@ fun CustomerDetailsPage(
                 contentScale = ContentScale.Crop
             )
         }
+
         Spacer(modifier = Modifier.height(20.dp))
+
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-            CustomerTextField(modifier = Modifier, "Name *", name, onNameChange)
+
+            CustomerTextField(
+                label = "Name *",
+                value = name,
+                leadingIcon = Icons.Default.Person,
+                onValueChange = onNameChange
+            )
+
             Spacer(modifier = Modifier.height(12.dp))
-            CustomerTextField(modifier = Modifier, "Mobile Number *", mobile, onMobileChange)
+
+            // ✅ Mobile from AddCustomerViewModel
+            // ✅ Mobile field — locked after OTP verified
+            CustomerTextField(
+                label = "Mobile Number *",
+                value = vm.mobile,
+                keyboardType = KeyboardType.Phone,
+                leadingIcon = Icons.Default.Phone,
+                readOnly = vm.isOtpVerified,
+                onValueChange = {
+                    if (!vm.isOtpVerified) vm.mobile = it  // ✅ Lock field after verified
+                },
+                enabled = !vm.isOtpVerified  // ✅ Disable field after verified
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+// ✅ Error message
+            vm.errorMessage?.let {
+                Text(
+                    text = it,
+                    color = Color.Red,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+            }
+
+// ✅ Hide entire OTP section after verified
+            if (!vm.isOtpVerified) {
+
+                // Send OTP Button
+                if (!vm.isOtpSent) {
+                    Button(
+                        onClick = { vm.sendOtp() },
+                        enabled = !vm.isLoading
+                    ) {
+                        if (vm.isLoading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Send OTP")
+                        }
+                    }
+                }
+
+                // OTP Field + Verify Button
+                if (vm.isOtpSent) {
+                    CustomerTextField(
+                        label = "OTP",
+                        value = vm.otp,
+                        keyboardType = KeyboardType.NumberPassword,
+                        leadingIcon = Icons.Default.Lock,
+                        onValueChange = { vm.otp = it }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Button(
+                        onClick = { vm.verifyOtp() },
+                        enabled = !vm.isLoading
+                    ) {
+                        if (vm.isLoading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Verify OTP")
+                        }
+                    }
+                }
+
+            } else {
+                // ✅ Show verified badge with locked icon instead of OTP section
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFE8F5E9), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Icon(
+                        Icons.Default.VerifiedUser,
+                        contentDescription = null,
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Mobile Verified",
+                        color = Color(0xFF4CAF50),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(12.dp))
-            CustomerTextField(modifier = Modifier, "OTP", otp, onOTPChange)
+
             Spacer(modifier = Modifier.height(12.dp))
-            CustomerTextField(modifier = Modifier, "E-mail", email, onEmailChange)
+
+            CustomerTextField(
+                label = "E-mail",
+                value = email,
+                keyboardType = KeyboardType.Email,
+                leadingIcon = Icons.Default.Email,
+                onValueChange = onEmailChange
+            )
             Spacer(modifier = Modifier.height(12.dp))
-            CustomerTextField(modifier = Modifier, "Aadhaar Card", aadharCard, onAadharCardChange)
+            CustomerTextField(
+                label = "Aadhaar Card",
+                value = aadharCard,
+                keyboardType = KeyboardType.Number,
+                leadingIcon = Icons.Default.Badge,
+                onValueChange = onAadharCardChange
+            )
             Spacer(modifier = Modifier.height(12.dp))
-            CustomerTextField(modifier = Modifier, "Address *", address, onAddressChange)
+            CustomerTextField(
+                label = "Address *",
+                value = address,
+                leadingIcon = Icons.Default.Home,
+                onValueChange = onAddressChange
+            )
             Spacer(modifier = Modifier.height(12.dp))
-            CustomerTextField(modifier = Modifier, "PAN Card", pancard, onPanCardChange)
+            CustomerTextField(
+                label = "PAN Card",
+                value = pancard,
+                leadingIcon = Icons.Default.CreditCard,
+                onValueChange = onPanCardChange
+            )
             Spacer(modifier = Modifier.height(12.dp))
-            CustomerTextField(modifier = Modifier, "Alternate Mobile", alternate, onAlternateChange)
+            CustomerTextField(
+                label = "Alternate Mobile",
+                value = alternate,
+                keyboardType = KeyboardType.Phone,
+                leadingIcon = Icons.Default.PhoneAndroid,
+                onValueChange = onAlternateChange
+            )
             Spacer(modifier = Modifier.height(30.dp))
 
             Button(
                 onClick = {
-                    if (validateFields()) {
-                        onContinue()
-                    } else {
-                        showValidationError = true
-                    }
+                    if (validateFields()) onNext() else showValidationError = true
                 },
                 modifier = Modifier.fillMaxWidth().height(55.dp),
                 shape = RoundedCornerShape(12.dp),
@@ -331,57 +516,104 @@ fun CustomerDetailsPage(
                 Button(
                     onClick = { showValidationError = false },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFff5722))
-                ) {
-                    Text("OK")
-                }
+                ) { Text("OK") }
             }
         )
     }
 }
 
+// ─── Improved CustomerTextField with icon, divider, placeholder ───────────────
+
 @Composable
 fun CustomerTextField(
-    modifier: Modifier = Modifier,
     label: String,
     value: String,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    modifier: Modifier = Modifier,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    leadingIcon: ImageVector? = null,
     onValueChange: (String) -> Unit
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(60.dp).background(AppColors.PrimaryLight),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(62.dp)
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFF3949AB), Color(0xFF283593))
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (leadingIcon != null) {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.8f),
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+            }
             Text(
-                modifier = Modifier.padding(start = 15.dp).width(120.dp),
                 text = label,
-                fontSize = 15.sp,
+                modifier = Modifier.width(110.dp),
+                fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = Color.White.copy(alpha = 0.85f)
+            )
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(30.dp)
+                    .background(Color.White.copy(alpha = 0.3f))
             )
             TextField(
-                modifier = Modifier.weight(1f).padding(start = 10.dp, end = 5.dp),
                 value = value,
                 onValueChange = onValueChange,
-                textStyle = TextStyle(fontSize = 15.sp, color = Color.White, fontWeight = FontWeight.Medium),
+                enabled = enabled,
+                readOnly = readOnly,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 4.dp),
+                textStyle = TextStyle(
+                    fontSize = 15.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium
+                ),
+                placeholder = {
+                    Text(
+                        text = "Enter ${label.trimEnd('*').trim().lowercase()}",
+                        color = Color.White.copy(alpha = 0.4f),
+                        fontSize = 13.sp
+                    )
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                singleLine = true,
                 colors = TextFieldDefaults.colors(
-                    disabledTextColor = Color.White,
-                    disabledContainerColor = Color.Transparent,
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
                     focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                    disabledTextColor = Color.White,
+                    cursorColor = Color.White
                 )
             )
         }
     }
 }
+
+// ─── Read Only Field ──────────────────────────────────────────────────────────
 
 @Composable
 fun CustomerReadOnlyField(modifier: Modifier = Modifier, label: String, value: String) {
@@ -416,6 +648,8 @@ fun CustomerReadOnlyField(modifier: Modifier = Modifier, label: String, value: S
     }
 }
 
+// ─── Date Picker Field ────────────────────────────────────────────────────────
+
 @Composable
 fun CustomerDatePickerField(
     modifier: Modifier = Modifier,
@@ -424,12 +658,9 @@ fun CustomerDatePickerField(
     onValueChange: (String) -> Unit
 ) {
     val context = LocalContext.current
-
     Card(
         modifier = modifier.fillMaxWidth().clickable {
-            showDatePicker(context, value) { selectedDate ->
-                onValueChange(selectedDate)
-            }
+            showDatePicker(context, value) { selectedDate -> onValueChange(selectedDate) }
         },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -473,18 +704,14 @@ fun CustomerDatePickerField(
 
 fun showDatePicker(context: Context, currentDate: String, onDateSelected: (String) -> Unit) {
     val calendar = Calendar.getInstance()
-
     if (currentDate.isNotEmpty()) {
         try {
             val parts = currentDate.split("/")
             if (parts.size == 3) {
                 calendar.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())
             }
-        } catch (e: Exception) {
-            // Use current date if parsing fails
-        }
+        } catch (e: Exception) { }
     }
-
     DatePickerDialog(
         context,
         { _, year, month, dayOfMonth ->
@@ -496,6 +723,8 @@ fun showDatePicker(context: Context, currentDate: String, onDateSelected: (Strin
         calendar.get(Calendar.DAY_OF_MONTH)
     ).show()
 }
+
+// ─── Text Field with Scanner ──────────────────────────────────────────────────
 
 @Composable
 fun CustomerTextFieldWithScanner(
@@ -530,6 +759,7 @@ fun CustomerTextFieldWithScanner(
                 value = value,
                 onValueChange = onValueChange,
                 textStyle = TextStyle(fontSize = 15.sp, color = Color.White, fontWeight = FontWeight.Medium),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 colors = TextFieldDefaults.colors(
                     disabledTextColor = Color.White,
                     disabledContainerColor = Color.Transparent,
@@ -546,6 +776,8 @@ fun CustomerTextFieldWithScanner(
         }
     }
 }
+
+// ─── Page 2: Product Details ──────────────────────────────────────────────────
 
 @Composable
 fun ProductDetailsPage(
@@ -570,79 +802,38 @@ fun ProductDetailsPage(
     onSubmit: () -> Unit
 ) {
     val context = LocalContext.current
-
-    val options = GmsBarcodeScannerOptions.Builder()
-        .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
-        .build()
+    val options = GmsBarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS).build()
     val scanner = GmsBarcodeScanning.getClient(context, options)
-
 
     var showValidationError by remember { mutableStateOf(false) }
     var validationMessage by remember { mutableStateOf("") }
 
     fun productvalidateFields(): Boolean {
         return when {
-            productName.isBlank() -> {
-                validationMessage = "Please enter product name"
-                false
-            }
-            imei1.isBlank() -> {
-                validationMessage = "Please enter IMEI 1 must be 15 digits"
-                false
-            }
-            
-            loanAmount.isBlank() -> {
-                validationMessage = "Please enter loan amount"
-                false
-            }
-            downPayment.isBlank() -> {
-                validationMessage = "Please enter down payment"
-                false
-            }
-            rateOfInterest.isBlank() -> {
-                validationMessage = "Please enter rate of interest"
-                false
-            }
-            monthlyInstallment.isBlank() -> {
-                validationMessage = "Please enter monthly installment"
-                false
-            }
-            totalInstallment.isBlank() -> {
-                validationMessage = "Please enter total installment"
-                false
-            }
-            agreementDate.isBlank() -> {
-                validationMessage = "Please enter agreement date"
-                false
-            }
-            totalAmount.isBlank() -> {
-                validationMessage = "Please enter total amount"
-                false
-            }
-            emiDay.isBlank() -> {
-                validationMessage = "Please enter EMI day"
-                false
-            }
-            firstInstallment.isBlank() -> {
-                validationMessage = "Please enter loan start date"
-                false
-            }
+            productName.isBlank() -> { validationMessage = "Please enter product name"; false }
+            imei1.isBlank() -> { validationMessage = "Please enter IMEI 1 must be 15 digits"; false }
+            loanAmount.isBlank() -> { validationMessage = "Please enter loan amount"; false }
+            downPayment.isBlank() -> { validationMessage = "Please enter down payment"; false }
+            rateOfInterest.isBlank() -> { validationMessage = "Please enter rate of interest"; false }
+            monthlyInstallment.isBlank() -> { validationMessage = "Please enter monthly installment"; false }
+            totalInstallment.isBlank() -> { validationMessage = "Please enter total installment"; false }
+            agreementDate.isBlank() -> { validationMessage = "Please enter agreement date"; false }
+            totalAmount.isBlank() -> { validationMessage = "Please enter total amount"; false }
+            emiDay.isBlank() -> { validationMessage = "Please enter EMI day"; false }
+            firstInstallment.isBlank() -> { validationMessage = "Please enter loan start date"; false }
             else -> true
         }
     }
 
     fun scanBarcode(onResult: (String) -> Unit) {
         scanner.startScan()
-            .addOnSuccessListener { barcode ->
-                barcode.rawValue?.let { onResult(it) }
-            }
+            .addOnSuccessListener { barcode -> barcode.rawValue?.let { onResult(it) } }
             .addOnCanceledListener { }
             .addOnFailureListener { }
     }
 
     LaunchedEffect(totalAmount, downPayment, rateOfInterest, totalInstallment) {
         val calculation = calculateEMIDetails(totalAmount, downPayment, rateOfInterest, totalInstallment)
-
         if (calculation.loanAmount.isNotEmpty()) {
             onLoanAmountChange(calculation.loanAmount)
             onInterestAmountChange(calculation.interestAmount)
@@ -666,24 +857,30 @@ fun ProductDetailsPage(
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Spacer(modifier = Modifier.height(20.dp))
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-            CustomerTextField(modifier = Modifier, "Product Name", productName, onProductNameChange)
-            Spacer(modifier = Modifier.height(15.dp))
-            CustomerTextField(modifier = Modifier, "Serial no", serialNumber, onSerialNumberChange)
-            Spacer(modifier = Modifier.height(15.dp))
 
-            CustomerTextFieldWithScanner(
-                modifier = Modifier,
-                label = "IMEI 1",
-                value = imei1,
-                onValueChange = onImei1Change,
-                onScanClick = { scanBarcode { onImei1Change(it) } }
+            CustomerTextField(
+                label = "Product Name",
+                value = productName,
+                leadingIcon = Icons.Default.Inventory,
+                onValueChange = onProductNameChange
+            )
+            Spacer(modifier = Modifier.height(15.dp))
+            CustomerTextField(
+                label = "Serial No.",
+                value = serialNumber,
+                leadingIcon = Icons.Default.Numbers,
+                onValueChange = onSerialNumberChange
             )
             Spacer(modifier = Modifier.height(15.dp))
 
             CustomerTextFieldWithScanner(
-                modifier = Modifier,
-                label = "IMEI 2",
-                value = imei2,
+                modifier = Modifier, label = "IMEI 1", value = imei1,
+                onValueChange = onImei1Change,
+                onScanClick = { scanBarcode { onImei1Change(it) } }
+            )
+            Spacer(modifier = Modifier.height(15.dp))
+            CustomerTextFieldWithScanner(
+                modifier = Modifier, label = "IMEI 2", value = imei2,
                 onValueChange = onImei2Change,
                 onScanClick = { scanBarcode { onImei2Change(it) } }
             )
@@ -700,25 +897,44 @@ fun ProductDetailsPage(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Calculate,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Icon(Icons.Default.Calculate, null, tint = Color.White, modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("EMI Calculator", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
             Spacer(modifier = Modifier.height(15.dp))
 
-            CustomerTextField(modifier = Modifier, "Product Price", totalAmount, ontotalAmountChange)
+            CustomerTextField(
+                label = "Product Price",
+                value = totalAmount,
+                keyboardType = KeyboardType.Decimal,
+                leadingIcon = Icons.Default.CurrencyRupee,
+                onValueChange = ontotalAmountChange
+            )
             Spacer(modifier = Modifier.height(15.dp))
-            CustomerTextField(modifier = Modifier, "Down Payment", downPayment, onDownPaymentChange)
+            CustomerTextField(
+                label = "Down Payment",
+                value = downPayment,
+                keyboardType = KeyboardType.Decimal,
+                leadingIcon = Icons.Default.Payments,
+                onValueChange = onDownPaymentChange
+            )
             Spacer(modifier = Modifier.height(15.dp))
-            CustomerTextField(modifier = Modifier, "Rate of Interest %", rateOfInterest, onRateOfInterestChange)
+            CustomerTextField(
+                label = "Interest %",
+                value = rateOfInterest,
+                keyboardType = KeyboardType.Decimal,
+                leadingIcon = Icons.Default.Percent,
+                onValueChange = onRateOfInterestChange
+            )
             Spacer(modifier = Modifier.height(15.dp))
-            CustomerTextField(modifier = Modifier, "Total Installments", totalInstallment, onTotalInstallmentChange)
+            CustomerTextField(
+                label = "Installments",
+                value = totalInstallment,
+                keyboardType = KeyboardType.Number,
+                leadingIcon = Icons.Default.DateRange,
+                onValueChange = onTotalInstallmentChange
+            )
             Spacer(modifier = Modifier.height(20.dp))
 
             CustomerReadOnlyField(modifier = Modifier, "Loan Amount", "₹$loanAmount")
@@ -729,38 +945,30 @@ fun ProductDetailsPage(
             Spacer(modifier = Modifier.height(15.dp))
             CustomerReadOnlyField(modifier = Modifier, "Monthly Installment", "₹$monthlyInstallment")
             Spacer(modifier = Modifier.height(20.dp))
+
             CustomerDatePickerField(
                 label = "EMI Day",
                 value = emiDay,
                 onValueChange = { selectedDate ->
-                    val day = selectedDate
-                        .split("/")
-                        .getOrNull(2)
-                        ?.padStart(2, '0') ?: ""
+                    val day = selectedDate.split("/").getOrNull(2)?.padStart(2, '0') ?: ""
                     onEmiDayChange(day)
                 }
             )
-
             Spacer(modifier = Modifier.height(20.dp))
-
-            CustomerDatePickerField(
-                modifier = Modifier,
-                label = "Agreement Date",
-                value = agreementDate,
-                onValueChange = onAgreementDateChange
-            )
+            CustomerDatePickerField(modifier = Modifier, label = "Agreement Date", value = agreementDate, onValueChange = onAgreementDateChange)
             Spacer(modifier = Modifier.height(15.dp))
             CustomerDatePickerField(
                 label = "1st EMI Date",
                 value = firstInstallment,
-                onValueChange = { date ->
-                    onFirstInstallmentChange(date.replace("/", "-"))
-                }
+                onValueChange = { date -> onFirstInstallmentChange(date.replace("/", "-")) }
             )
-
             Spacer(modifier = Modifier.height(15.dp))
-
-            CustomerTextField(modifier = Modifier, "Billing Invoice", billingInvoice, onBillingInvoiceChange)
+            CustomerTextField(
+                label = "Billing Invoice",
+                value = billingInvoice,
+                leadingIcon = Icons.Default.Receipt,
+                onValueChange = onBillingInvoiceChange
+            )
             Spacer(modifier = Modifier.height(15.dp))
 
             if (emiDates.isNotEmpty()) {
@@ -771,7 +979,6 @@ fun ProductDetailsPage(
                     color = Color.White,
                     modifier = Modifier.padding(vertical = 10.dp)
                 )
-
                 emiDates.forEachIndexed { index, date ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -802,24 +1009,10 @@ fun ProductDetailsPage(
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color.White
                             )
-                            Row(
-                                modifier = Modifier.padding(end = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = date,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.White,
-                                    textAlign = TextAlign.End
-                                )
+                            Row(modifier = Modifier.padding(end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = date, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Color.White, textAlign = TextAlign.End)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = "Auto Generated",
-                                    tint = Color(0xFF4CAF50),
-                                    modifier = Modifier.size(24.dp)
-                                )
+                                Icon(Icons.Default.CheckCircle, "Auto Generated", tint = Color(0xFF4CAF50), modifier = Modifier.size(24.dp))
                             }
                         }
                     }
@@ -829,21 +1022,12 @@ fun ProductDetailsPage(
 
             Spacer(modifier = Modifier.height(30.dp))
             Button(
-                onClick = {
-                    if (productvalidateFields()) {
-                        onSubmit()
-                    } else {
-                        showValidationError = true
-                    }
-                },
+                onClick = { if (productvalidateFields()) onSubmit() else showValidationError = true },
                 modifier = Modifier.fillMaxWidth().height(55.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFff5722))
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                     Text("CONTINUE TO DOCUMENTS", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(Icons.Default.ArrowForward, "Continue", tint = Color.White)
@@ -855,17 +1039,15 @@ fun ProductDetailsPage(
                     onDismissRequest = { showValidationError = false },
                     title = { Text("Validation Error") },
                     text = { Text(validationMessage) },
-                    confirmButton = {
-                        TextButton(onClick = { showValidationError = false }) {
-                            Text("OK")
-                        }
-                    }
+                    confirmButton = { TextButton(onClick = { showValidationError = false }) { Text("OK") } }
                 )
             }
             Spacer(modifier = Modifier.height(30.dp))
         }
     }
 }
+
+// ─── Page 3: Upload Documents ─────────────────────────────────────────────────
 
 @Composable
 fun UploadDocumentPage(
@@ -898,120 +1080,67 @@ fun UploadDocumentPage(
         )
         Spacer(Modifier.height(15.dp))
         Column(Modifier.padding(horizontal = 20.dp)) {
-            Text(
-                "Upload Required Documents",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+            Text("Upload Required Documents", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.padding(bottom = 16.dp))
 
-            DocumentUploadCard("Customer Photo", viewModel.photo) {
-                viewModel.photoUri?.let { cameraPhoto.launch(it) }
-            }
+            DocumentUploadCard("Customer Photo", viewModel.photo) { viewModel.photoUri?.let { cameraPhoto.launch(it) } }
             Spacer(Modifier.height(15.dp))
-            DocumentUploadCard("Aadhaar Card Front", viewModel.aadhaarFront) {
-                viewModel.aadhaarFrontUri?.let { cameraAadhaarFront.launch(it) }
-            }
+            DocumentUploadCard("Aadhaar Card Front", viewModel.aadhaarFront) { viewModel.aadhaarFrontUri?.let { cameraAadhaarFront.launch(it) } }
             Spacer(Modifier.height(15.dp))
-            DocumentUploadCard("Aadhaar Card Back", viewModel.aadhaarBack) {
-                viewModel.aadhaarBackUri?.let { cameraAadhaarBack.launch(it) }
-            }
+            DocumentUploadCard("Aadhaar Card Back", viewModel.aadhaarBack) { viewModel.aadhaarBackUri?.let { cameraAadhaarBack.launch(it) } }
             Spacer(Modifier.height(15.dp))
-            DocumentUploadCard("PAN Card", viewModel.panCard) {
-                viewModel.panCardUri?.let { cameraPan.launch(it) }
-            }
+            DocumentUploadCard("PAN Card", viewModel.panCard) { viewModel.panCardUri?.let { cameraPan.launch(it) } }
             Spacer(Modifier.height(20.dp))
 
-            Text(
-                "Customer Signature",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
+            Text("Customer Signature", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
             Spacer(Modifier.height(10.dp))
-
-            SignatureBox(
-                modifier = Modifier.fillMaxWidth().height(200.dp),
-                context = context,
-                onDraw = { path -> viewModel.updateSignature(path, context) }
-            )
+            SignatureBox(modifier = Modifier.fillMaxWidth().height(200.dp), context = context, onDraw = { path -> viewModel.updateSignature(path, context) })
             Spacer(Modifier.height(25.dp))
 
             if (customerviewModel.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    color = Color(0xFFff5722)
-                )
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally), color = Color(0xFFff5722))
                 Spacer(Modifier.height(16.dp))
             }
 
             Button(
                 onClick = {
                     customerviewModel.addCustomerToApi(
-                        name = name,
-                        mobile = mobile,
-                        email = email,
-                        address = address,
-                        aadharCard = aadharCard,
-                        pancard = pancard,
-                        alternate = alternate,
-                        imei1 = imei1,
-                        imei2 = imei2,
-                        productName = productName,
-                        serialNumber = "",
-                        totalAmount = totalAmount,
-                        loanstartdate = firstInstallment,
-                        loanAmount = loanAmount,
-                        downPayment = downPayment,
-                        monthlyInstallment = monthlyInstallment,
-                        totalInstallment = totalInstallment,
-                        rateOfInterest = rateOfInterest,
-                        agreementDate = agreementDate,
-                        billingInvoice = billingInvoice,
-                        emiday = emiDay,
-                        retailerId = 1,
-                        photoUri = viewModel.photo,
-                        aadhaarFrontUri = viewModel.aadhaarFront,
-                        aadhaarBackUri = viewModel.aadhaarBack,
-                        panCardUri = viewModel.panCard,
+                        name = name, mobile = mobile, email = email, address = address,
+                        aadharCard = aadharCard, pancard = pancard, alternate = alternate,
+                        imei1 = imei1, imei2 = imei2, productName = productName, serialNumber = "",
+                        totalAmount = totalAmount, loanstartdate = firstInstallment,
+                        loanAmount = loanAmount, downPayment = downPayment,
+                        monthlyInstallment = monthlyInstallment, totalInstallment = totalInstallment,
+                        rateOfInterest = rateOfInterest, agreementDate = agreementDate,
+                        billingInvoice = billingInvoice, emiday = emiDay, retailerId = 1,
+                        photoUri = viewModel.photo, aadhaarFrontUri = viewModel.aadhaarFront,
+                        aadhaarBackUri = viewModel.aadhaarBack, panCardUri = viewModel.panCard,
                         signatureFilePath = viewModel.signaturePath,
                         onSuccess = { responseDeviceId ->
                             Log.d("AddCustomer", "API Success - Device ID: $responseDeviceId")
                             val emiDatesString = emiDates.joinToString(",")
                             val paymentStatusString = List(emiDates.size) { "false" }.joinToString(",")
-
                             try {
                                 val customer = addCustomerList(
-                                    id = 0,
-                                    name, mobile, email,
-                                    aadharCard, address, pancard, alternate, productName, imei1, imei2,
-                                    loanAmount, loanFrequency, rateOfInterest, agreementDate,
-                                    firstInstallment,
-                                    downPayment, billingInvoice, totalInstallment, emiDatesString,
-                                    paymentStatusString, viewModel.photo?.toString(),
-                                    viewModel.aadhaarFront?.toString(), viewModel.aadhaarBack?.toString(),
-                                    viewModel.panCard?.toString(), viewModel.signaturePath
+                                    id = 0, name, mobile, email, aadharCard, address, pancard,
+                                    alternate, productName, imei1, imei2, loanAmount, loanFrequency,
+                                    rateOfInterest, agreementDate, firstInstallment, downPayment,
+                                    billingInvoice, totalInstallment, emiDatesString, paymentStatusString,
+                                    viewModel.photo?.toString(), viewModel.aadhaarFront?.toString(),
+                                    viewModel.aadhaarBack?.toString(), viewModel.panCard?.toString(),
+                                    viewModel.signaturePath
                                 )
                                 customerviewModel.addCustomer(customer)
                                 Log.d("AddCustomer", "Room DB save completed")
-
-                                // ✅ Direct navigation - no Handler needed
-                                Log.d("AddCustomer", "Navigating to QR Scanner with Device ID: $responseDeviceId")
                                 navController.navigate("qr_screen/$responseDeviceId") {
                                     popUpTo(Routes.AddCustomer.route) { inclusive = true }
                                 }
-
                             } catch (e: Exception) {
                                 Log.e("AddCustomer", "Error saving to Room: ${e.message}", e)
                                 errorMessage = "Saved to server but local save failed: ${e.message}"
                                 showErrorDialog = true
                             }
                         },
-                        onError = { error ->
-                            errorMessage = error
-                            showErrorDialog = true
-                        }
+                        onError = { error -> errorMessage = error; showErrorDialog = true }
                     )
                 },
                 modifier = Modifier.fillMaxWidth().height(55.dp),
@@ -1019,17 +1148,12 @@ fun UploadDocumentPage(
                 colors = ButtonDefaults.buttonColors(Color(0xFFff5722)),
                 enabled = !customerviewModel.isLoading
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                     Icon(Icons.Default.CheckCircle, "Submit", tint = Color.White)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         if (customerviewModel.isLoading) "SUBMITTING..." else "SUBMIT & COMPLETE",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -1043,16 +1167,13 @@ fun UploadDocumentPage(
             title = { Text("Error") },
             text = { Text(errorMessage) },
             confirmButton = {
-                Button(
-                    onClick = { showErrorDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFff5722))
-                ) {
-                    Text("OK")
-                }
+                Button(onClick = { showErrorDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFff5722))) { Text("OK") }
             }
         )
     }
 }
+
+// ─── Camera Launcher ──────────────────────────────────────────────────────────
 
 @Composable
 fun rememberCameraLauncher(
@@ -1064,12 +1185,10 @@ fun rememberCameraLauncher(
     }
 }
 
+// ─── Signature Box ────────────────────────────────────────────────────────────
+
 @Composable
-fun SignatureBox(
-    modifier: Modifier = Modifier,
-    context: Context,
-    onDraw: (Path) -> Unit
-) {
+fun SignatureBox(modifier: Modifier = Modifier, context: Context, onDraw: (Path) -> Unit) {
     val pathPoints = remember { mutableStateListOf<Offset>() }
     val currentPath = remember { Path() }
 
@@ -1101,54 +1220,22 @@ fun SignatureBox(
                 val drawPath = Path()
                 if (pathPoints.isNotEmpty()) {
                     drawPath.moveTo(pathPoints[0].x, pathPoints[0].y)
-                    for (i in 1 until pathPoints.size) {
-                        drawPath.lineTo(pathPoints[i].x, pathPoints[i].y)
-                    }
+                    for (i in 1 until pathPoints.size) drawPath.lineTo(pathPoints[i].x, pathPoints[i].y)
                 }
-                drawPath(
-                    path = drawPath,
-                    color = Color.Black,
-                    style = Stroke(
-                        width = 5f,
-                        cap = StrokeCap.Round,
-                        join = StrokeJoin.Round
-                    )
-                )
+                drawPath(path = drawPath, color = Color.Black, style = Stroke(width = 5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
             }
             if (pathPoints.isEmpty()) {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = null,
-                        tint = Color.Gray.copy(alpha = 0.3f),
-                        modifier = Modifier.size(48.dp)
-                    )
+                Column(modifier = Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.Edit, null, tint = Color.Gray.copy(alpha = 0.3f), modifier = Modifier.size(48.dp))
                     Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Sign here with your finger",
-                        color = Color.Gray.copy(alpha = 0.5f),
-                        fontSize = 14.sp
-                    )
+                    Text("Sign here with your finger", color = Color.Gray.copy(alpha = 0.5f), fontSize = 14.sp)
                 }
             }
         }
 
         Spacer(Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            TextButton(
-                onClick = {
-                    pathPoints.clear()
-                    currentPath.reset()
-                    onDraw(currentPath)
-                }
-            ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = { pathPoints.clear(); currentPath.reset(); onDraw(currentPath) }) {
                 Icon(Icons.Default.Refresh, "Clear", tint = Color(0xFFff5722))
                 Spacer(Modifier.width(4.dp))
                 Text("Clear Signature", color = Color(0xFFff5722))
@@ -1156,6 +1243,8 @@ fun SignatureBox(
         }
     }
 }
+
+// ─── Document Upload Card ─────────────────────────────────────────────────────
 
 @Composable
 fun DocumentUploadCard(label: String, imageUri: Uri?, onClick: () -> Unit) {
@@ -1167,11 +1256,9 @@ fun DocumentUploadCard(label: String, imageUri: Uri?, onClick: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth()
-                    .height(48.dp).background(
-                        brush = Brush.linearGradient(colors = listOf(AppColors.PrimaryLight, AppColors.PrimaryDark)),
-                        shape = RoundedCornerShape(13.dp)
-                    ).padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+                    .background(brush = Brush.linearGradient(colors = listOf(AppColors.PrimaryLight, AppColors.PrimaryDark)), shape = RoundedCornerShape(13.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1181,28 +1268,12 @@ fun DocumentUploadCard(label: String, imageUri: Uri?, onClick: () -> Unit) {
         }
         imageUri?.let {
             Spacer(Modifier.height(10.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth().height(200.dp),
-                shape = RoundedCornerShape(10.dp),
-                elevation = CardDefaults.cardElevation(4.dp)
-            ) {
+            Card(modifier = Modifier.fillMaxWidth().height(200.dp), shape = RoundedCornerShape(10.dp), elevation = CardDefaults.cardElevation(4.dp)) {
                 Box {
-                    Image(
-                        rememberAsyncImagePainter(it), "Captured $label",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                    Icon(
-                        Icons.Default.CheckCircle, "Uploaded",
-                        tint = Color(0xFF4CAF50),
-                        modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(32.dp)
-                    )
+                    Image(rememberAsyncImagePainter(it), "Captured $label", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    Icon(Icons.Default.CheckCircle, "Uploaded", tint = Color(0xFF4CAF50), modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(32.dp))
                 }
             }
         }
     }
 }
-
-
-
-

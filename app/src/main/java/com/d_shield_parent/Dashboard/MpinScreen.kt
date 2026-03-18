@@ -1,5 +1,6 @@
 package com.d_shield_parent.Dashboard
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -23,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.d_shield_parent.Dashboard.viewModel.MpinState
 import com.d_shield_parent.Dashboard.viewModel.MpinViewmodel
+import com.d_shield_parent.SharedPreference.shareprefManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +40,7 @@ fun MpinScreen(
     var mpinError by remember { mutableStateOf<String?>(null) }
 
     val mpinSuccess by viewmodel.mpinState.collectAsState()
+    val context = LocalContext.current
 
     // Navigation effect
     LaunchedEffect(mpinSuccess) {
@@ -241,9 +245,19 @@ fun MpinScreen(
                 onClick = {
                     val isMobileValid = validateMobileNo(mobileNo)
                     val isMpinValid = validateMpin(mpin)
+                  val savedPhone = shareprefManager.getPhone() ?: ""
 
                     if (isMobileValid && isMpinValid) {
-                        viewmodel.setMpin(mpin = mpin)
+                        if (mobileNo != savedPhone) {
+                            mobileNoError = "Number doesn't match your login number"
+                            Toast.makeText(
+                                context,
+                                "Mobile number must match the number you logged in with",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            viewmodel.setMpin(mpin = mpin)
+                        }
                     }
                 },
                 modifier = Modifier

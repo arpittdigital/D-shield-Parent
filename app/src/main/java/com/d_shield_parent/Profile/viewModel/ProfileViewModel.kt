@@ -22,6 +22,7 @@ data class ProfileData(
     val address: String = "",
     val profileImageUri: Uri? = null,
     val walletBalance: String = "0",
+    val points: Int = 0,
     val enrolledDevices: Int = 0,
     val activeDevices: Int = 0,
     val lockedDevices: Int = 0
@@ -53,7 +54,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     private val context = getApplication<Application>().applicationContext
 
-    // ✅ Init block - Fetch profile on creation
+    // Init block - Fetch profile on creation
     init {
         fetchProfile()
     }
@@ -101,18 +102,20 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
 
 
-    // ✅ Show logout confirmation dialog
+    // Show logout confirmation dialog
     fun showLogoutConfirmation() {
         _showLogoutDialog.value = true
     }
 
-    // ✅ Hide logout dialog
+    // Hide logout dialog
     fun hideLogoutDialog() {
         _showLogoutDialog.value = false
     }
 
-    // ✅ Fetch Profile from API with proper error handling
+    // Fetch Profile from API with proper error handling
+
     fun fetchProfile() {
+        Log.d(TAG, "fetchProfile called, points from prefs: ${shareprefManager.getPoints()}")
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
@@ -123,28 +126,40 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 val token = shareprefManager.getToken()
 
                 if (token.isNullOrEmpty()) {
-                    Log.e(TAG, "❌ No token found")
+                    Log.e(TAG, " No token found")
                     _errorMessage.value = "Authentication token missing. Please login again."
                     _isLoading.value = false
                     return@launch
                 }
 
                 val authHeader = "Bearer $token"
-                Log.d(TAG, "🔑 Token: ${authHeader.take(50)}...")
+                Log.d(TAG, " Token: ${authHeader.take(50)}...")
 
                 val response = RetrofitClient.instance.ProfileRetailer(authHeader)
 
-                Log.d(TAG, "📥 Response Code: ${response.code()}")
-                Log.d(TAG, "📥 Response Body: ${response.body()}")
+                Log.d(TAG, "RAW BODY: ${response.errorBody()?.string() ?: response.body().toString()}")
+
+                Log.d(TAG, " Response Code: ${response.code()}")
+                Log.d(TAG, " Response Body: ${response.body()}")
 
                 if (response.isSuccessful) {
                     val profileResponse = response.body()
 
                     if (profileResponse != null && profileResponse.success) {
                         val data = profileResponse.data
+
+                        Log.d(TAG, " data.points: ${data?.points}")
+                        Log.d(TAG, "data.wallet_balance: ${data?.wallet_balance}")
+                        Log.d(TAG, "full data: $data")
+
                         val retailer = data?.retailer
 
                         if (retailer != null) {
+
+                            Log.d(TAG, " retailer.points: ${retailer.points}")
+                            Log.d(TAG, " data.points: ${data.points}")
+                            Log.d(TAG, " FULL RAW DATA: $data")
+                            Log.d(TAG, " Points from prefs: ${shareprefManager.getPoints()}")
                             _profileData.value = ProfileData(
                                 username = retailer.name ?: "",
                                 phoneNo = retailer.phone ?: "",
@@ -154,30 +169,34 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                                 store = retailer.distributor_id ?: "",
                                 address = retailer.address ?: "",
                                 profileImageUri = null,
-                                walletBalance = data.wallet_balance ?: "0",
+
+//                                walletBalance   = shareprefManager.getPoints().toString(),
+//                                walletBalance = "5",
+                                walletBalance   = (retailer.points ?: data.points ?: 0).toString(), //  from retailer
+                                points          = retailer.points ?: data.points ?: 0,              //  from retailer
                                 enrolledDevices = data.enrolled_devices ?: 0,
                                 activeDevices = data.active_devices ?: 0,
                                 lockedDevices = data.locked_devices ?: 0
                             )
 
-                            Log.d(TAG, "✅ Profile loaded successfully")
-                            Log.d(TAG, "✅ Username: ${retailer.name}")
-                            Log.d(TAG, "✅ Phone: ${retailer.phone}")
+                            Log.d(TAG, "Profile loaded successfully")
+                            Log.d(TAG, "Username: ${retailer.name}")
+                            Log.d(TAG,  "Phone: ${retailer.phone}")
 
                         } else {
-                            Log.e(TAG, "❌ Retailer data is NULL")
+                            Log.e(TAG, " Retailer data is NULL")
                             _errorMessage.value = "Profile data not available"
                         }
 
                     } else {
-                        Log.e(TAG, "❌ API Response invalid or success=false")
+                        Log.e(TAG, " API Response invalid or success=false")
                         _errorMessage.value = profileResponse?.toString() ?: "Invalid response from server"
                     }
 
                 } else {
                     val errorBody = response.errorBody()?.string()
-                    Log.e(TAG, "❌ API Failed: ${response.code()}")
-                    Log.e(TAG, "❌ Error Body: $errorBody")
+                    Log.e(TAG, " API Failed: ${response.code()}")
+                    Log.e(TAG, " Error Body: $errorBody")
 
                     _errorMessage.value = when (response.code()) {
                         401 -> "Session expired. Please login again."
@@ -188,7 +207,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Exception while fetching profile", e)
+                Log.e(TAG, " Exception while fetching profile", e)
                 _errorMessage.value = "Network error: ${e.message}"
             } finally {
                 _isLoading.value = false
@@ -197,29 +216,27 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // ✅ Logout with API call
+    //Logout with API call
     fun logout() {
         viewModelScope.launch {
             _isLoggingOut.value = true
             _showLogoutDialog.value = false
 
             try {
-                Log.d(TAG, "🚀 Starting logout process...")
+                Log.d(TAG, " Starting logout process...")
                 val token = shareprefManager.getToken()
 
                 if (token.isNullOrEmpty()) {
-                    Log.w(TAG, "⚠️ No token found, clearing local data only")
+                    Log.w(TAG, "⚠ No token found, clearing local data only")
                     clearUserData()
                     _logoutSuccess.value = true
                     return@launch
                 }
 
                 val authHeader = "Bearer $token"
-                Log.d(TAG, "📤 Calling logout API...")
+
 
                 val response = RetrofitClient.instance.LogoutRetailer(authHeader)
-
-                Log.d(TAG, "📥 Logout Response Code: ${response.code()}")
 
                 if (response.isSuccessful) {
                     val body = response.body()
@@ -229,14 +246,12 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
                 } else {
                     val errorBody = response.errorBody()?.string()
-                    Log.e(TAG, "❌ Logout API Failed: ${response.code()} - $errorBody")
-                    // Still clear local data even if API fails
                     clearUserData()
                     _logoutSuccess.value = true
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "💥 Logout Exception: ${e.message}", e)
+                Log.e(TAG, " Logout Exception: ${e.message}", e)
                 // Clear local data even on exception
                 clearUserData()
                 _logoutSuccess.value = true
@@ -252,7 +267,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         Log.d(TAG, "🗑️ User data cleared from SharedPreferences")
     }
 
-    // ✅ Clear error message
+    // Clear error message
     fun clearError() {
         _errorMessage.value = null
     }

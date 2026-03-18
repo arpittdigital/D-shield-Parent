@@ -28,13 +28,15 @@ data class RetailerUser(
     val points: Int?,
     val distributor_id: Int?,
     val created_at: String?,
-    val updated_at: String?
+    val updated_at: String?,
+
 )
 data class RetailerResponse(
     override val success: Boolean,
     override val token: String?,
     override val role: String,
     val user: RetailerUser?
+
 ) : BaseLoginResponse
 data class DistributorUser(
     val id: Int,

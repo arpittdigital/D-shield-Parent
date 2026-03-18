@@ -31,7 +31,7 @@ class HistoryViewModel(application: Application): AndroidViewModel(application) 
         viewModelScope.launch {
 
             _historyListState.value = historyListState.value
-            Log.d(TAG, "📡 Fetching customer list")
+            Log.d(TAG, " Fetching customer list")
 
             try {
                 val token = shareprefManager.getToken()
@@ -47,17 +47,17 @@ class HistoryViewModel(application: Application): AndroidViewModel(application) 
 
                 if (response.isSuccessful && response.body() != null) {
                     val data = response.body()!!
-                    Log.d(TAG, "✅ Devices fetched: ${data.devices.size}")
+                    Log.d(TAG, " Devices fetched: ${data.devices.size}")
                     _historyListState.value = HistoryListState.Success(data)
                 } else {
                     val error = response.errorBody()?.string()
-                    Log.e(TAG, "❌ Fetch failed: $error")
+                    Log.e(TAG, " Fetch failed: $error")
                     _historyListState.value =
                         HistoryListState.Error("Server error ${response.code()}")
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Exception", e)
+                Log.e(TAG, "Exception", e)
                 _historyListState.value =
                     HistoryListState.Error(e.localizedMessage ?: "Something went wrong")
             }

@@ -1,5 +1,7 @@
 package com.d_shield_parent.Dashboard
 
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -15,11 +17,13 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.d_shield_parent.Profile.ProfileScreen
 import com.d_shield_parent.SharedPreference.shareprefManager
@@ -46,6 +50,21 @@ fun MainScreen(navController: NavController) {
 
     var selectedIndex = remember { mutableStateOf(0) }
 
+    val profileViewModel: ProfileViewModel = viewModel()
+    LaunchedEffect(Unit) {
+        profileViewModel.fetchProfile()
+    }
+
+    BackHandler {
+        if (selectedIndex.value != 0) {
+            // if not on home tab, go back to home tab
+            selectedIndex.value = 0
+        } else {
+            // if already on home tab, exit app — don't go to log in
+            (navController.context as? Activity)?.finish()
+        }
+    }
+
     Scaffold(
         bottomBar = {
             BottomNavBar(
@@ -68,7 +87,7 @@ fun MainScreen(navController: NavController) {
             } else {
                 // Retailer tabs — existing screens
                 when (selectedIndex.value) {
-                    0 -> HomeScreen(navController = navController)
+                    0  -> HomeScreen(navController = navController, viewModel = profileViewModel)
                     1 -> ListScreen(navController = navController)
 //                    2 -> ServiceScreen(navController = navController)
                     2 -> HistoryScreen(navController = navController)

@@ -18,6 +18,10 @@ import com.d_shield_parent.auth.Model.DistributorLoginRequest
 import com.d_shield_parent.auth.Model.DistributorResponse
 import com.d_shield_parent.auth.Model.LoginRequest
 import com.d_shield_parent.auth.Model.RetailerResponse
+import com.d_shield_parent.otp.SendOtpRequest
+import com.d_shield_parent.otp.SendOtpResponse
+import com.d_shield_parent.otp.VerifyOtpRequest
+import com.d_shield_parent.otp.VerifyOtpResponse
 import com.d_shield_parent.presentation.auth.DeviceAddResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -35,6 +39,8 @@ interface ApiService {
     suspend fun LoginRetailer(
         @Body request: LoginRequest
     ): Response<RetailerResponse>
+
+
 
     @POST("api/retailer/set-mpin")
     suspend fun SetMpin(
@@ -137,6 +143,22 @@ interface ApiService {
         @Part signature: MultipartBody.Part?
     ): Response<DeviceAddResponse>
 }
+// Send OTP API
+interface SendOtpApiService {
+    @POST("api/send-otp")
+    suspend fun sendOtp(
+        @Body request: SendOtpRequest
+    ): Response<SendOtpResponse>
+}
+
+// Verify OTP API
+interface VerifyOtpApiService {
+    @POST("api/verify-otp")
+    suspend fun verifyOtp(
+        @Body request: VerifyOtpRequest
+    ): Response<VerifyOtpResponse>
+}
+
 
 
 

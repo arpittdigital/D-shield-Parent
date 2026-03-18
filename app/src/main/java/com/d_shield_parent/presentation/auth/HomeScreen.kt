@@ -4,6 +4,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.animation.*
 import androidx.activity.compose.BackHandler
 import android.app.Activity
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,6 +28,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -71,6 +73,7 @@ fun HomeScreen(
         (context as? Activity)?.finish()
     }
     val profileData by viewModel.profileData.collectAsState()
+    Log.d("HomeScreen", "walletBalance = ${profileData.walletBalance}")
 
     val serviceItems = listOf(
         ServiceItem("Add Customer",  Icons.Default.PersonAdd,             Gold,              Color(0xFFFFF8E1), "add_customer_screen"),
@@ -133,29 +136,23 @@ fun HomeScreen(
 
             // ── Service Grid ────────────────────────────────────────────
             Column(
-                modifier             = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                verticalArrangement  = Arrangement.spacedBy(12.dp)
+                modifier            = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                serviceItems.chunked(2).forEachIndexed { rowIndex, rowItems ->
-                    Row(
-                        modifier              = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        rowItems.forEachIndexed { colIndex, item ->
-                            AnimatedServiceCard(
-                                item           = item,
-                                animationIndex = rowIndex * 2 + colIndex,
-                                modifier       = Modifier.weight(1f),
-                                onClick = {
-                                    navController.navigate(item.route) {
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            )
+                serviceItems.forEachIndexed { index, item ->
+                    AnimatedServiceCard(
+                        item           = item,
+                        animationIndex = index,
+                        modifier       = Modifier.fillMaxWidth(),  // ← full width
+                        onClick        = {
+                            navController.navigate(item.route) {
+                                launchSingleTop = true
+                                restoreState    = true
+                            }
                         }
-                        if (rowItems.size == 1) Spacer(modifier = Modifier.weight(1f))
-                    }
+                    )
                 }
             }
 
@@ -360,7 +357,7 @@ private fun StatsRow(activeUsers: String, walletBalance: String, enrollDevices: 
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             StatCard(Modifier.weight(1f), Icons.Default.Person,               activeUsers,   "Active Users", Color(0xFF5B8DCA), Color(0xFFE8F0FA), Color(0xFF5B8DCA))
-            StatCard(Modifier.weight(1f), Icons.Default.AccountBalanceWallet, walletBalance, "Wallet",       Gold,              GoldLight,          Gold)
+            StatCard(Modifier.weight(1f), Icons.Default.AccountBalanceWallet, walletBalance, "Points",       Gold,              GoldLight,          Gold)
             StatCard(Modifier.weight(1f), Icons.Default.PermDeviceInformation,enrollDevices, "Devices",      Color(0xFF43A891), Color(0xFFE4F6F3), Color(0xFF43A891))
         }
     }
@@ -442,7 +439,7 @@ private fun AnimatedServiceCard(
     val infiniteTransition = rememberInfiniteTransition(label = "float")
     val iconOffset by infiniteTransition.animateFloat(
         initialValue  = 0f,
-        targetValue   = -6f,
+        targetValue   = -4f,
         animationSpec = infiniteRepeatable(
             animation  = tween(1400, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -456,22 +453,22 @@ private fun AnimatedServiceCard(
         modifier = modifier
     ) {
         Card(
-            modifier = Modifier
+            modifier  = Modifier
                 .scale(scale)
-                .fillMaxWidth()
-                .height(128.dp)
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication        = ripple(color = Gold.copy(alpha = 0.2f)),
-                    onClick           = onClick
-                ),
-            shape     = RoundedCornerShape(20.dp),
+                .fillMaxWidth()   // ← full width, NOT half
+                .height(76.dp),   // ← 76 NOT 128
+            shape     = RoundedCornerShape(16.dp),
             colors    = CardDefaults.cardColors(containerColor = BgCard),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication        = ripple(color = Gold.copy(alpha = 0.2f)),
+                        onClick           = onClick
+                    )
                     .border(
                         1.dp,
                         Brush.linearGradient(
@@ -481,30 +478,52 @@ private fun AnimatedServiceCard(
                                 1.0f to Color.Transparent
                             )
                         ),
-                        RoundedCornerShape(20.dp)
+                        RoundedCornerShape(16.dp)
                     )
             ) {
-                // Soft color blob — top-right decorative circle
+
+                // ── Top color line ───────────────────────────────
                 Box(
                     modifier = Modifier
-                        .size(72.dp)
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    item.iconTint.copy(alpha = 0.6f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                        .align(Alignment.TopCenter)
+                )
+
+                // ── Decorative blob top-right ────────────────────
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
                         .align(Alignment.TopEnd)
-                        .offset(x = 20.dp, y = (-20).dp)
+                        .offset(x = 16.dp, y = (-16).dp)
                         .clip(CircleShape)
                         .background(item.iconBg)
                 )
 
-                Column(
-                    modifier            = Modifier.fillMaxSize().padding(14.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
+                // ── ROW layout (icon | title | arrow) ───────────
+                Row(
+                    modifier              = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // Floating icon box with animation
+                    // Animated icon box
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(item.iconBg)
-                            .border(1.dp, item.iconTint.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+                            .border(1.dp, item.iconTint.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
                             .offset(y = iconOffset.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -512,26 +531,35 @@ private fun AnimatedServiceCard(
                             imageVector        = item.icon,
                             contentDescription = item.title,
                             tint               = item.iconTint,
-                            modifier           = Modifier.size(26.dp)
+                            modifier           = Modifier.size(24.dp)
                         )
                     }
 
-                    // Title + Arrow
-                    Row(
-                        modifier              = Modifier.fillMaxWidth(),
-                        verticalAlignment     = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    // Title — takes all remaining space
+                    Text(
+                        text       = item.title,
+                        fontSize   = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color      = TextPrimary,
+                        maxLines   = 1,
+                        overflow   = TextOverflow.Ellipsis,
+                        modifier   = Modifier.weight(1f)
+                    )
+
+                    // Arrow
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .background(Gold.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                            .border(0.5.dp, Gold.copy(alpha = 0.4f), RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(item.title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                        Box(
-                            modifier = Modifier
-                                .size(22.dp)
-                                .background(Gold.copy(alpha = 0.12f), RoundedCornerShape(6.dp))
-                                .border(0.5.dp, Gold.copy(alpha = 0.4f), RoundedCornerShape(6.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.ArrowForwardIos, null, tint = Gold, modifier = Modifier.size(10.dp))
-                        }
+                        Icon(
+                            imageVector        = Icons.Default.ArrowForwardIos,
+                            contentDescription = null,
+                            tint               = Gold,
+                            modifier           = Modifier.size(10.dp)
+                        )
                     }
                 }
             }

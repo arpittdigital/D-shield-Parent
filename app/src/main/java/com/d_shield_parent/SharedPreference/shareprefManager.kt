@@ -12,6 +12,8 @@ object shareprefManager {
     private const val KEY_USER_TYPE = "user_Type"
     private const val KEY_PHONE = "user_phone"
 
+    private const val KEY_POINTS    = "user_points"
+
     private lateinit var prefs: SharedPreferences
 
     fun init(context: Context) {
@@ -29,6 +31,14 @@ object shareprefManager {
 
     fun getPhone(): String? {
         return prefs.getString(KEY_PHONE, null)
+    }
+
+    fun savePoints(points: Int) {
+        prefs.edit().putInt("points", points).apply()
+    }
+
+    fun getPoints(): Int {
+        return prefs.getInt("points", 0)
     }
 
     fun getToken(): String? {

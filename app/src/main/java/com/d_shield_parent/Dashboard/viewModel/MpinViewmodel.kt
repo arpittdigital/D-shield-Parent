@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// ✅ State Class
+// State Class
 sealed class MpinState {
     object Idle : MpinState()
     object Loading : MpinState()

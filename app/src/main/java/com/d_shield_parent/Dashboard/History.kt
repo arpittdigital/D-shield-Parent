@@ -67,16 +67,18 @@ fun HistoryScreen(
                 title = {
                     Text(
                         "Unlock History",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
                         color = Color.White
                     )
                 },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, null, tint = Color.White)
-                    }
-                },
+//                navigationIcon = {
+//                    IconButton(onClick = { navController.popBackStack() }) {
+//                        Icon(Icons.Default.ArrowBack, null, tint = Color.White)
+//                    }
+//                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = AppColors.PrimaryLight
                 )

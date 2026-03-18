@@ -81,15 +81,15 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
                 apiSuccess = false
 
                 Log.d(TAG, "========== API CALL STARTED ==========")
-                Log.d(TAG, "⭐ CUSTOMER: $name ($mobile)")
-                Log.d(TAG, "⭐ PRODUCT: $productName (IMEI1: $imei1)")
-                Log.d(TAG, "⭐ LOAN: ₹$loanAmount ($totalInstallment installments)")
-                Log.d(TAG, "⭐ EMI DAY: $emiday")
-                Log.d(TAG, "⭐ LOAN START DATE: $loanstartdate")
+                Log.d(TAG, " CUSTOMER: $name ($mobile)")
+                Log.d(TAG, " PRODUCT: $productName (IMEI1: $imei1)")
+                Log.d(TAG, " LOAN: ₹$loanAmount ($totalInstallment installments)")
+                Log.d(TAG, " EMI DAY: $emiday")
+                Log.d(TAG, " LOAN START DATE: $loanstartdate")
 
                 val context = getApplication<Application>().applicationContext
 
-                // ✅ FIXED: Create all RequestBody variables with UNIQUE names
+                // FIXED: Create all RequestBody variables with UNIQUE names
                 val customerNameBody = name.toRequestBody("text/plain".toMediaTypeOrNull())
                 val customerPhoneBody = mobile.toRequestBody("text/plain".toMediaTypeOrNull())
                 val customerEmailBody = email.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -109,7 +109,7 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
                 val downPaymentBody = downPayment.toRequestBody("text/plain".toMediaTypeOrNull())
                 val monthlyInstallmentBody = monthlyInstallment.toRequestBody("text/plain".toMediaTypeOrNull())
 
-                // ✅ CRITICAL FIX: Use different variable name (totalInstallmentsBody, not totalInstallment)
+                //  CRITICAL FIX: Use different variable name (totalInstallmentsBody, not totalInstallment)
                 val totalInstallmentsBody = totalInstallment.toRequestBody("text/plain".toMediaTypeOrNull())
 
                 val rateOfInterestBody = rateOfInterest.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -119,16 +119,16 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
 
                 val emiDayBody = emiday.toRequestBody("text/plain".toMediaTypeOrNull())
 
-                Log.d(TAG, "\n📋 REQUEST BODY VALUES:")
+                Log.d(TAG, "\n REQUEST BODY VALUES:")
                 Log.d(TAG, "   emi_day: $emiday")
                 Log.d(TAG, "   loan_start_date: $loanstartdate")
                 Log.d(TAG, "   total_installments: $totalInstallment")
                 Log.d(TAG, "   loan_amount: $loanAmount")
                 Log.d(TAG, "   monthly_installment: $monthlyInstallment")
 
-                Log.d(TAG, "\n📸 Converting images to MultipartBody.Part...")
+                Log.d(TAG, "\n Converting images to MultipartBody.Part...")
 
-                // ✅ Images ko MultipartBody.Part mein convert karo
+                //  Images ko MultipartBody.Part mein convert karo
                 val livePhotoPart = photoUri?.let { uri ->
                     createImagePart("live_photo", uri, context)
                 }
@@ -145,7 +145,7 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
                     createImagePart("pan_card", uri, context)
                 }
 
-                // ✅ Signature ko file se MultipartBody.Part mein convert karo
+                //  Signature
                 val signaturePart = signatureFilePath?.let { path ->
                     val file = File(path)
                     if (file.exists()) {
@@ -153,12 +153,12 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
                         val requestBody = file.asRequestBody("image/png".toMediaTypeOrNull())
                         MultipartBody.Part.createFormData("signature", file.name, requestBody)
                     } else {
-                        Log.e(TAG, "   ❌ Signature file NOT found: $path")
+                        Log.e(TAG, "   Signature file NOT found: $path")
                         null
                     }
                 }
 
-                Log.d(TAG, "\n📦 Files prepared:")
+                Log.d(TAG, "\n Files prepared:")
                 Log.d(TAG, "   Photo: ${livePhotoPart != null}")
                 Log.d(TAG, "   Aadhaar Front: ${aadhaarFrontPart != null}")
                 Log.d(TAG, "   Aadhaar Back: ${aadhaarBackPart != null}")
@@ -166,10 +166,10 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
                 Log.d(TAG, "   Signature: ${signaturePart != null}")
 
                 val token = "Bearer " + shareprefManager.getToken()
-                Log.d(TAG, "\n🔐 Token: ${token.take(50)}...")
-                Log.d(TAG, "\n🚀 Making API call to AddDevice endpoint...")
+                Log.d(TAG, "\n Token: ${token.take(50)}...")
+                Log.d(TAG, "\n Making API call to AddDevice endpoint...")
 
-                // ✅ FIXED: Use the pre-created RequestBody variables
+                //  FIXED: Use the pre-created RequestBody variables
                 val response = RetrofitClient.instance.AddDevice(
                     token = token,
                     customerName = customerNameBody,
@@ -192,7 +192,7 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
                     downPayment = downPaymentBody,
                     monthlyInstallment = monthlyInstallmentBody,
 
-                    // ✅ FIXED: Use pre-created variable directly
+                    //  FIXED: Use pre-created variable directly
                     totalInstallmentsBody = totalInstallmentsBody,
 
                     rateOfInterest = rateOfInterestBody,
@@ -206,7 +206,7 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
                     signature = signaturePart
                 )
 
-                Log.d(TAG, "\n📥 API RESPONSE:")
+                Log.d(TAG, "\nAPI RESPONSE:")
                 Log.d(TAG, "   Response Code: ${response.code()}")
                 Log.d(TAG, "   Response Message: ${response.message()}")
                 Log.d(TAG, "   Is Successful: ${response.isSuccessful}")
@@ -218,7 +218,7 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
                     Log.d(TAG, "device.id: ${responseBody?.device?.id}")
                     Log.d(TAG, "device.deviceId: ${responseBody?.device?.deviceId}")
 
-                    // ✅ CORRECT: Pehle "id" field check karo, phir "deviceId"
+
                     val deviceId = responseBody?.device?.id
                         ?: responseBody?.device?.deviceId
                         ?: 0
@@ -229,13 +229,13 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
                     if (deviceId == 0) {
                         isLoading = false
                         val errorMsg = "Device ID not found in response"
-                        Log.e(TAG, "❌ $errorMsg")
+                        Log.e(TAG, " $errorMsg")
                         apiError = errorMsg
                         onError(errorMsg)
                         return@launch
                     }
 
-                    Log.d(TAG, "✅ SUCCESS!")
+                    Log.d(TAG, "SUCCESS!")
                     Log.d(TAG, "   Device ID: $deviceId")
                     apiSuccess = true
                     isLoading = false
@@ -243,7 +243,7 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
                 } else {
                     val errorBody = response.errorBody()?.string()
                     val errorMsg = "Error ${response.code()}: $errorBody"
-                    Log.e(TAG, "❌ FAILED: $errorMsg")
+                    Log.e(TAG, " FAILED: $errorMsg")
                     apiError = errorMsg
                     isLoading = false
                     onError(errorMsg)
@@ -255,7 +255,7 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
                 val errorMsg = "Exception: ${e.message}"
                 apiError = errorMsg
                 isLoading = false
-                Log.e(TAG, "❌ EXCEPTION OCCURRED!")
+                Log.e(TAG, " EXCEPTION OCCURRED!")
                 Log.e(TAG, "   Exception Type: ${e.javaClass.simpleName}")
                 Log.e(TAG, "   Exception Message: ${e.message}")
                 Log.e(TAG, "   Stack Trace:", e)
@@ -265,7 +265,7 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    // ✅ Helper function to create MultipartBody.Part from URI
+    // Helper function to create MultipartBody.Part from URI
     private fun createImagePart(
         partName: String,
         uri: Uri,
@@ -281,20 +281,20 @@ class CustomerViewModel(application: Application) : AndroidViewModel(application
             inputStream?.close()
 
             if (tempFile.exists() && tempFile.length() > 0) {
-                Log.d(TAG, "   ✅ $partName created: ${tempFile.length()} bytes")
+                Log.d(TAG, "    $partName created: ${tempFile.length()} bytes")
                 val requestBody = tempFile.asRequestBody("image/*".toMediaTypeOrNull())
                 MultipartBody.Part.createFormData(partName, tempFile.name, requestBody)
             } else {
-                Log.e(TAG, "   ❌ $partName file is empty or doesn't exist")
+                Log.e(TAG, "    $partName file is empty or doesn't exist")
                 null
             }
         } catch (e: Exception) {
-            Log.e(TAG, "   ❌ Error creating $partName", e)
+            Log.e(TAG, "    Error creating $partName", e)
             null
         }
     }
 
-    // ✅ Function to reset API state if needed
+    //  Function to reset API state if needed
     fun resetApiState() {
         apiSuccess = false
         apiError = null

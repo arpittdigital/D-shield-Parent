@@ -14,6 +14,7 @@ import com.d_shield_parent.navigation.Routes
 import com.d_shield_parent.ui.theme.DshieldParentTheme
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

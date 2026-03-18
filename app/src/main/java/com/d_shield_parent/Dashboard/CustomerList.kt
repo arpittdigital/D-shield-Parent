@@ -2,7 +2,7 @@ package com.d_shield_parent.Dashboard
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-
+import com.d_shield_parent.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -56,17 +56,17 @@ fun ListScreen(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBackIos,
-                        tint = Color.Black,
-                        contentDescription = "Back",
-                        modifier = Modifier.clickable { navController.popBackStack() }
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
+//                IconButton(onClick = { navController.popBackStack() }) {
+//                    Icon(
+//                        imageVector = Icons.Default.ArrowBackIos,
+//                        tint = Color.Black,
+//                        contentDescription = "Back"
+//                    )
+//                }
+//                Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     "Customer List",
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     color = Color.Black,
                     fontWeight = FontWeight.W800,
                     fontSize = 21.sp,
@@ -231,11 +231,11 @@ fun CustomerItem(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-//                        Image(
-//                            modifier = Modifier.size(50.dp),
-//                            painter = painterResource(id = R.drawable.placeholder),
-//                            contentDescription = null
-//                        )
+                        Image(
+                            modifier = Modifier.size(50.dp),
+                            painter = painterResource(id = R.drawable.placeholder),
+                            contentDescription = null
+                        )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
@@ -254,11 +254,11 @@ fun CustomerItem(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-//                        Image(
-//                            modifier = Modifier.size(40.dp),
-//                            painter = painterResource(R.drawable.mobileimg),
-//                            contentDescription = null
-//                        )
+                        Image(
+                            modifier = Modifier.size(40.dp),
+                            painter = painterResource(R.drawable.mobileimg),
+                            contentDescription = null
+                        )
                         Spacer(modifier = Modifier.width(12.dp))
                         Icon(
                             modifier = Modifier

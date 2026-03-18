@@ -60,7 +60,7 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
     fun fetchCustomerList() {
         viewModelScope.launch {
             _customerListState.value = CustomerListState.Loading
-            Log.d(TAG, "📡 Fetching customer list")
+            Log.d(TAG, " Fetching customer list")
 
             try {
                 val token = shareprefManager.getToken()
@@ -76,17 +76,17 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
 
                 if (response.isSuccessful && response.body() != null) {
                     val data = response.body()!!
-                    Log.d(TAG, "✅ Devices fetched: ${data.devices.size}")
+                    Log.d(TAG, "Devices fetched: ${data.devices.size}")
                     _customerListState.value = CustomerListState.Success(data)
                 } else {
                     val error = response.errorBody()?.string()
-                    Log.e(TAG, "❌ Fetch failed: $error")
+                    Log.e(TAG, " Fetch failed: $error")
                     _customerListState.value =
                         CustomerListState.Error("Server error ${response.code()}")
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Exception", e)
+                Log.e(TAG, " Exception", e)
                 _customerListState.value =
                     CustomerListState.Error(e.localizedMessage ?: "Something went wrong")
             }
@@ -116,17 +116,17 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
 
                 if (response.isSuccessful && response.body() != null) {
                     val data = response.body()!!
-                    Log.d(TAG, "✅ EMI Schedule fetched: ${data.data.installments.size} installments")
+                    Log.d(TAG, " EMI Schedule fetched: ${data.data.installments.size} installments")
                     stateFlow.value = EMIScheduleState.Success(data)
                 } else {
                     val error = response.errorBody()?.string()
-                    Log.e(TAG, "❌ EMI fetch failed: $error")
+                    Log.e(TAG, " EMI fetch failed: $error")
                     stateFlow.value =
                         EMIScheduleState.Error("Failed to load EMI schedule")
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Exception fetching EMI", e)
+                Log.e(TAG, " Exception fetching EMI", e)
                 stateFlow.value =
                     EMIScheduleState.Error(e.localizedMessage ?: "Something went wrong")
             }
@@ -138,12 +138,12 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
         installmentId: Int
     ) {
         viewModelScope.launch {
-            Log.d(TAG, "💰 Marking installment as paid: ID=$installmentId")
+            Log.d(TAG, " Marking installment as paid: ID=$installmentId")
 
             try {
                 val token = shareprefManager.getToken()
                 if (token.isNullOrEmpty()) {
-                    Log.e(TAG, "❌ Token missing")
+                    Log.e(TAG, " Token missing")
                     return@launch
                 }
 
@@ -154,16 +154,16 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
                 )
 
                 if (response.isSuccessful) {
-                    Log.d(TAG, "✅ Installment marked as paid")
+                    Log.d(TAG, " Installment marked as paid")
                     // Refresh EMI schedule to get updated data
                     fetchEMISchedule(deviceId)
                 } else {
                     val error = response.errorBody()?.string()
-                    Log.e(TAG, "❌ Payment marking failed: $error")
+                    Log.e(TAG, " Payment marking failed: $error")
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Exception in markInstallmentAsPaid", e)
+                Log.e(TAG, " Exception in markInstallmentAsPaid", e)
             }
         }
     }
@@ -191,7 +191,7 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
                 DeviceStatus.UNLOCK.value
             }
 
-            Log.d(TAG, "🔐 Current: $currentStatus → Sending: $newStatus for IMEI1=$imei1")
+            Log.d(TAG, " Current: $currentStatus → Sending: $newStatus for IMEI1=$imei1")
 
             try {
                 val request = updateRequest(
@@ -205,17 +205,17 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
                 )
 
                 if (response.isSuccessful) {
-                    Log.d(TAG, "✅ Status updated successfully")
+                    Log.d(TAG, "Status updated successfully")
                     fetchCustomerList()
                 } else {
                     val error = response.errorBody()?.string()
-                    Log.e(TAG, "❌ Status update failed: $error")
+                    Log.e(TAG, " Status update failed: $error")
                     _customerListState.value =
                         CustomerListState.Error("Failed to update device status")
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Exception", e)
+                Log.e(TAG, "Exception", e)
                 _customerListState.value =
                     CustomerListState.Error(e.localizedMessage ?: "Something went wrong")
             }
@@ -247,7 +247,7 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
                 )
 
                 if (response.isSuccessful) {
-                    Log.d(TAG, "✅ Device removed successfully")
+                    Log.d(TAG, " Device removed successfully")
 
                     deviceToDelete?.let { device ->
                         val currentDate = java.text.SimpleDateFormat(
@@ -264,19 +264,19 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
                         )
 
                       HistoryRepository.addHistory(history)
-                        Log.d(TAG, "✅ Added to history: ${device.customer_name}")
+                        Log.d(TAG, "Added to history: ${device.customer_name}")
                     }
 
                     fetchCustomerList()
                 } else {
                     val error = response.errorBody()?.string()
-                    Log.e(TAG, "❌ Remove failed: $error")
+                    Log.e(TAG, "Remove failed: $error")
                     _customerListState.value =
                         CustomerListState.Error("Failed to remove device")
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Exception", e)
+                Log.e(TAG, " Exception", e)
                 _customerListState.value =
                     CustomerListState.Error(e.localizedMessage ?: "Something went wrong")
             }
@@ -307,7 +307,7 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
 //import kotlinx.coroutines.flow.asStateFlow
 //import kotlinx.coroutines.launch
 //
-//// ✅ UI State
+////  UI State
 //sealed class CustomerListState {
 //    object Idle : CustomerListState()
 //    object Loading : CustomerListState()
@@ -384,7 +384,7 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
 //                return@launch
 //            }
 //
-//            // ✅ FIXED: Check for both "active" AND "unlocked"
+//            // FIXED: Check for both "active" AND "unlocked"
 //            // Agar device unlocked/active hai → LOCK bhejo
 //            // Agar device locked hai → UNLOCK bhejo
 //            val isCurrentlyUnlocked = currentStatus.equals("active", ignoreCase = true) ||
@@ -410,17 +410,17 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
 //                )
 //
 //                if (response.isSuccessful) {
-//                    Log.d(TAG, "✅ Status updated successfully")
+//                    Log.d(TAG, " Status updated successfully")
 //                    fetchCustomerList()  // Refresh karke latest status lao
 //                } else {
 //                    val error = response.errorBody()?.string()
-//                    Log.e(TAG, "❌ Status update failed: $error")
+//                    Log.e(TAG, " Status update failed: $error")
 //                    _customerListState.value =
 //                        CustomerListState.Error("Failed to update device status")
 //                }
 //
 //            } catch (e: Exception) {
-//                Log.e(TAG, "❌ Exception", e)
+//                Log.e(TAG, " Exception", e)
 //                _customerListState.value =
 //                    CustomerListState.Error(e.localizedMessage ?: "Something went wrong")
 //            }
@@ -430,7 +430,7 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
 //
 //    fun removeDevice(imei1: String) {
 //        viewModelScope.launch {
-//            // ✅ Get device details BEFORE deleting
+//            //  Get device details BEFORE deleting
 //            val currentState = _customerListState.value
 //            val deviceToDelete = if (currentState is CustomerListState.Success) {
 //                currentState.data.devices.find { it.imei1 == imei1 }

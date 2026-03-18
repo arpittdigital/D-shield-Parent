@@ -27,4 +27,26 @@ object RetrofitClient {
             .build()
             .create(ApiService::class.java)
     }
+
+    private val gson = GsonConverterFactory.create()
+
+    //  Send OTP Retrofit instance
+    val sendOtpApi: SendOtpApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://dshieldpro.com/")
+            .addConverterFactory(gson)
+            .build()
+            .create(SendOtpApiService::class.java)
+    }
+
+    // Verify OTP Retrofit instance
+    val verifyOtpApi: VerifyOtpApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://dshieldpro.com/")
+            .addConverterFactory(gson)
+            .build()
+            .create(VerifyOtpApiService::class.java)
+
+
+    }
 }

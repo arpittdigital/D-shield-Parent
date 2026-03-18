@@ -128,12 +128,17 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                                 userType = "RETAILER",
                                 phone = uiState.value.phoneNumber
                             )
-                            Log.d("LoginViewModel", "✅ Retailer login success → dashboard_screen")
+                            shareprefManager.savePoints(body.user?.points ?: 0)
+                            Log.d("LoginViewModel", " Points saved: ${body.user?.points}")
+
+
+
+                            Log.d("LoginViewModel", "Retailer login success → dashboard_screen")
                             _uiState.update {
                                 it.copy(loginSuccess = true, navigateTo = "dashboard_screen")
                             }
                         } else {
-                            Log.e("LoginViewModel", "❌ Retailer login failed: ${response.code()} ${response.errorBody()?.string()}")
+                            Log.e("LoginViewModel", " Retailer login failed: ${response.code()} ${response.errorBody()?.string()}")
                             _uiState.update { it.copy(errorMessage = "Login failed. Check your credentials.") }
                         }
                     }
@@ -157,19 +162,19 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                                 userType = "DISTRIBUTOR",
                                 phone = uiState.value.phoneNumber
                             )
-                            Log.d("LoginViewModel", "✅ Distributor login success → distributor_dashboard_screen")
+                            Log.d("LoginViewModel", " Distributor login success → distributor_dashboard_screen")
                             _uiState.update {
                                 it.copy(loginSuccess = true, navigateTo = "distributor_dashboard_screen")
                             }
                         } else {
-                            Log.e("LoginViewModel", "❌ Distributor login failed: ${response.code()} ${response.errorBody()?.string()}")
+                            Log.e("LoginViewModel", " Distributor login failed: ${response.code()} ${response.errorBody()?.string()}")
                             _uiState.update { it.copy(errorMessage = "Login failed. Check your credentials.") }
                         }
                     }
                 }
 
             } catch (e: Exception) {
-                Log.e("LoginViewModel", "❌ Exception: ${e.message}", e)
+                Log.e("LoginViewModel", " Exception: ${e.message}", e)
                 _uiState.update { it.copy(errorMessage = "Network error: ${e.message}") }
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
