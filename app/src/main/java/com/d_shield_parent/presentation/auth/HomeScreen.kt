@@ -31,12 +31,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.d_shield_parent.Dashboard.ProfileViewModel
 import com.d_shield_parent.R
 import kotlinx.coroutines.delay
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 
 // ══════════════════════════════════════════════════════════════
 //  THEME: GOLD × WHITE  —  Clean Light Dashboard
@@ -63,39 +69,55 @@ data class ServiceItem(
 )
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    BackHandler {
-        (context as? Activity)?.finish()
+    BackHandler { (context as? Activity)?.finish() }
+
+    val profileData  by viewModel.profileData.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+
+    // ── Auto-refresh on screen resume ───────────────────────
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    val profileData by viewModel.profileData.collectAsState()
-    Log.d("HomeScreen", "walletBalance = ${profileData.walletBalance}")
 
     val serviceItems = listOf(
         ServiceItem("Add Customer",  Icons.Default.PersonAdd,             Gold,              Color(0xFFFFF8E1), "add_customer_screen"),
-      ServiceItem("Customer List", Icons.Default.People,                Color(0xFF5B8DCA), Color(0xFFE8F0FA), "customer_list_screen"),
-//        ServiceItem("Profile",       Icons.Default.Person,                Color(0xFF7B6EAA), Color(0xFFF0ECFA), "profile_screen"),
+        ServiceItem("Customer List", Icons.Default.People,                Color(0xFF5B8DCA), Color(0xFFE8F0FA), "customer_list_screen"),
         ServiceItem("Service",       Icons.Default.MiscellaneousServices, Color(0xFF43A891), Color(0xFFE4F6F3), "service_screen"),
         ServiceItem("Help",          Icons.Default.Help,                  Color(0xFFE07B3A), Color(0xFFFEF0E6), "help_screen"),
         ServiceItem("Setup M-Pin",   Icons.Default.Lock,                  Color(0xFFCFA849), Color(0xFFFFF8E1), "setup_mpin_screen"),
     )
 
-    Box(
-        modifier = Modifier
+    // ── Pull-to-refresh (Material3) ──────────────────────────
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh    = { viewModel.refresh() },
+        modifier     = Modifier
             .fillMaxSize()
             .background(BgScreen)
-            .verticalScroll(rememberScrollState())
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+        ) {
             AnimatedHeader(
-                username         = profileData.shop_name,
-                profileImageUri  = profileData.profileImageUri,
-           onProfileClick   = {  }
+                username        = profileData.shop_name,
+                profileImageUri = profileData.profileImageUri,
+                onProfileClick  = { }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -110,7 +132,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // ── Section Header ─────────────────────────────────────────
+            // ── Section Header ─────────────────────────────────
             Row(
                 modifier          = Modifier.padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -129,12 +151,11 @@ fun HomeScreen(
                     fontWeight = FontWeight.ExtraBold,
                     color      = TextPrimary
                 )
-
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // ── Service Grid ────────────────────────────────────────────
+            // ── Service Grid ────────────────────────────────────
             Column(
                 modifier            = Modifier
                     .fillMaxWidth()
@@ -145,7 +166,7 @@ fun HomeScreen(
                     AnimatedServiceCard(
                         item           = item,
                         animationIndex = index,
-                        modifier       = Modifier.fillMaxWidth(),  // ← full width
+                        modifier       = Modifier.fillMaxWidth(),
                         onClick        = {
                             navController.navigate(item.route) {
                                 launchSingleTop = true
@@ -160,6 +181,7 @@ fun HomeScreen(
         }
     }
 }
+
 
 // ── Header ────────────────────────────────────────────────────
 @Composable
@@ -222,7 +244,7 @@ private fun AnimatedHeader(
                             painter = if (profileImageUri != null)
                                 rememberAsyncImagePainter(profileImageUri)
                             else
-                                painterResource(id = R.drawable.placeholder),
+                                painterResource(id = R.drawable.logo),
                             contentDescription = "Profile",
                             contentScale       = ContentScale.Crop,
                             modifier           = Modifier.fillMaxSize().clip(CircleShape)
@@ -344,22 +366,44 @@ private fun BannerSection() {
 
 // ── Stats Row ─────────────────────────────────────────────────
 @Composable
-private fun StatsRow(activeUsers: String, walletBalance: String, enrollDevices: String) {
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(300); visible = true }
-
-    AnimatedVisibility(
-        visible = visible,
-        enter   = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(tween(500))
+private fun StatsRow(
+    activeUsers: String,
+    walletBalance: String,
+    enrollDevices: String
+) {
+    Row(
+        modifier              = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Row(
-            modifier              = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            StatCard(Modifier.weight(1f), Icons.Default.Person,               activeUsers,   "Active Users", Color(0xFF5B8DCA), Color(0xFFE8F0FA), Color(0xFF5B8DCA))
-            StatCard(Modifier.weight(1f), Icons.Default.AccountBalanceWallet, walletBalance, "Points",       Gold,              GoldLight,          Gold)
-            StatCard(Modifier.weight(1f), Icons.Default.PermDeviceInformation,enrollDevices, "Devices",      Color(0xFF43A891), Color(0xFFE4F6F3), Color(0xFF43A891))
-        }
+        StatCard(
+            modifier    = Modifier.weight(1f),
+            icon        = Icons.Default.Person,
+            value       = activeUsers,
+            label       = "Active Users",
+            iconColor   = Gold,
+            iconBg      = Color(0xFFFFF8E1),
+            borderColor = Gold
+        )
+        StatCard(
+            modifier    = Modifier.weight(1.2f),
+            icon        = Icons.Default.AccountBalanceWallet,
+            value       = "₹$walletBalance",
+            label       = "Wallet",
+            iconColor   = Gold,
+            iconBg      = Color(0xFFFFF8E1),
+            borderColor = Gold
+        )
+        StatCard(
+            modifier    = Modifier.weight(1f),
+            icon        = Icons.Default.PhoneAndroid,
+            value       = enrollDevices,
+            label       = "Devices",
+            iconColor   = Gold,
+            iconBg      = Color(0xFFFFF8E1),
+            borderColor = Gold
+        )
     }
 }
 
@@ -374,7 +418,7 @@ private fun StatCard(
     borderColor: Color
 ) {
     Card(
-        modifier  = modifier.height(82.dp),
+        modifier  = modifier.height(64.dp),       // compact height
         shape     = RoundedCornerShape(16.dp),
         colors    = CardDefaults.cardColors(containerColor = BgCard),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
@@ -384,39 +428,70 @@ private fun StatCard(
                 .fillMaxSize()
                 .border(1.dp, borderColor.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
         ) {
-            // Top thin color line
+            // Top shimmer line
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(2.dp)
                     .background(
                         Brush.horizontalGradient(
-                            listOf(Color.Transparent, borderColor.copy(alpha = 0.7f), Color.Transparent)
+                            listOf(
+                                Color.Transparent,
+                                borderColor.copy(alpha = 0.7f),
+                                Color.Transparent
+                            )
                         )
                     )
                     .align(Alignment.TopCenter)
-                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             )
 
-            Column(
-                modifier              = Modifier.fillMaxSize(),
-                horizontalAlignment   = Alignment.CenterHorizontally,
-                verticalArrangement   = Arrangement.Center
+            // ── Icon left + text right ───────────────────────
+            Row(
+                modifier          = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                // Icon circle
                 Box(
-                    modifier         = Modifier.size(28.dp).background(iconBg, CircleShape),
+                    modifier         = Modifier
+                        .size(36.dp)
+                        .background(iconBg, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, null, tint = iconColor, modifier = Modifier.size(16.dp))
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint     = iconColor,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
-                Spacer(modifier = Modifier.height(5.dp))
-                Text(value, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                Text(label, fontSize = 9.sp, color = TextSub, letterSpacing = 0.2.sp)
+
+                // Value + Label stacked
+                Column(
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text       = value,
+                        fontSize   = 15.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color      = TextPrimary,
+                        maxLines   = 1,
+                        overflow   = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text          = label,
+                        fontSize      = 9.sp,
+                        color         = TextSub,
+                        letterSpacing = 0.3.sp,
+                        maxLines      = 1
+                    )
+                }
             }
         }
     }
 }
-
 // ── Animated Service Card ─────────────────────────────────────
 @Composable
 private fun AnimatedServiceCard(

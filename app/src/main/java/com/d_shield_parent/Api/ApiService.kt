@@ -7,6 +7,7 @@ import com.d_shield_parent.Dashboard.model.MpinRequest
 import com.d_shield_parent.Dashboard.model.MpinResponse
 import com.d_shield_parent.Dashboard.model.RemoveRequest
 import com.d_shield_parent.Dashboard.model.RemoveResponse
+import com.d_shield_parent.Dashboard.model.TransactionResponse
 import com.d_shield_parent.Dashboard.model.getDeviceResponse
 import com.d_shield_parent.Dashboard.model.historyResponse
 import com.d_shield_parent.Dashboard.model.installmentRequest
@@ -142,6 +143,11 @@ interface ApiService {
         @Part pan_card: MultipartBody.Part?,
         @Part signature: MultipartBody.Part?
     ): Response<DeviceAddResponse>
+
+    @GET("api/retailer/history")
+    suspend fun getTransactionHistory(
+        @Header("Authorization") token: String
+    ): TransactionResponse
 }
 // Send OTP API
 interface SendOtpApiService {

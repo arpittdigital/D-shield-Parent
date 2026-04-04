@@ -52,6 +52,19 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _showLogoutDialog = MutableStateFlow(false)
     val showLogoutDialog: StateFlow<Boolean> = _showLogoutDialog.asStateFlow()
 
+    // In ProfileViewModel.kt
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    fun refresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            fetchProfile()
+            _isRefreshing.value = false
+        }
+    }
+
     private val context = getApplication<Application>().applicationContext
 
     // Init block - Fetch profile on creation
@@ -208,7 +221,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
             } catch (e: Exception) {
                 Log.e(TAG, " Exception while fetching profile", e)
-                _errorMessage.value = "Network error: ${e.message}"
+//                _errorMessage.value = "Network error: ${e.message}"
             } finally {
                 _isLoading.value = false
                 Log.d(TAG, "========== PROFILE FETCH COMPLETED ==========\n")
@@ -240,7 +253,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
                 if (response.isSuccessful) {
                     val body = response.body()
-                    Log.d(TAG, "✅ Logout API Success: ${body?.message}")
+                    Log.d(TAG, " Logout API Success: ${body?.message}")
                     clearUserData()
                     _logoutSuccess.value = true
 

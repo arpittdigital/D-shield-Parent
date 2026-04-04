@@ -2,6 +2,8 @@ package com.d_shield_parent.navigation
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -10,6 +12,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.d_shield_parent.Dashboard.AddCustomerFlow
+import com.d_shield_parent.Dashboard.CustomerDetailScreen
+import com.d_shield_parent.Dashboard.HistoryScreen
 import com.d_shield_parent.Dashboard.ListScreen
 import com.d_shield_parent.Dashboard.MainScreen
 import com.d_shield_parent.Dashboard.MpinScreen
@@ -17,6 +21,7 @@ import com.d_shield_parent.Dashboard.viewModel.MpinViewmodel
 import com.d_shield_parent.Profile.ProfileScreen
 import com.d_shield_parent.Dashboard.ProfileViewModel
 import com.d_shield_parent.NewService
+import com.d_shield_parent.SharedPreference.shareprefManager
 import com.d_shield_parent.auth.LoginScreen
 import com.d_shield_parent.presentation.auth.HomeScreen
 import com.d_shield_parent.auth.Splash1
@@ -35,9 +40,15 @@ sealed class Routes(val route: String) {
     object Register : Routes("register_screen")
     object Home : Routes("home_screen")
     object AddCustomer : Routes("add_customer_screen")
-
+    object History : Routes("history_screen")
     object QrScanner : Routes("qr_screen/{deviceId}") {
         fun createRoute(deviceId: Int) = "qr_screen/$deviceId"  // Add this help
+    }
+    object CustomerDetail : Routes("customer_detail/{deviceId}") {
+
+        fun createRoute(deviceId: Int): String {
+            return "customer_detail/$deviceId"
+        }
     }
 
     object CustomerList : Routes("customer_list_screen")
@@ -48,6 +59,7 @@ sealed class Routes(val route: String) {
     object SetupMPin : Routes("setup_mpin_screen")
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @SuppressLint("ViewModelConstructorInComposable")
 @Composable
 fun NavGraph(
@@ -105,6 +117,10 @@ fun NavGraph(
         composable(route = Routes.CustomerList.route) {
             ListScreen(navController = navController)
         }
+        composable(route = Routes.History.route) {
+            val token = shareprefManager.getToken() ?: ""
+            HistoryScreen(navController = navController)
+        }
 
         // Profile Screen
         composable(route = Routes.Profile.route) {
@@ -112,6 +128,17 @@ fun NavGraph(
                 navController = navController,
                 viewModel = profileViewModel
             )
+        }
+        composable(
+            route = Routes.CustomerDetail.route,
+            arguments = listOf(navArgument("deviceId") { type = NavType.StringType })
+        ) { backStackEntry ->
+
+            val deviceId = backStackEntry.arguments
+                ?.getString("deviceId")
+                ?.toIntOrNull() ?: 0
+
+            CustomerDetailScreen(deviceId = deviceId, navController = navController)
         }
 
         // Service Screen

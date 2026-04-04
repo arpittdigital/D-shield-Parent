@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.d_shield_parent.Dashboard.AppColors
+//import com.d_shield_parent.Dashboard.AppColors
 import com.d_shield_parent.R
 
 @Composable
@@ -73,7 +73,7 @@ fun LoginScreen(
             .fillMaxSize()
             .fillMaxWidth()
             .imePadding()
-            .background(AppColors.PrimaryDark)
+//            .background(AppColors.PrimaryDark)
             .verticalScroll(scrollState)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally

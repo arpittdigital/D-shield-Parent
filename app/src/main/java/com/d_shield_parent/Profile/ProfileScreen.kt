@@ -236,31 +236,16 @@ fun ProfileScreen(
                         .padding(top = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Box(contentAlignment = Alignment.BottomEnd) {
-                        Image(
-                            painter = if (profileData.profileImageUri != null)
-                                rememberAsyncImagePainter(profileData.profileImageUri)
-                            else painterResource(R.drawable.placeholder),
-                            contentDescription = "Profile",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(100.dp)
-                                .clip(CircleShape)
-                                .border(3.dp, Color.White, CircleShape)
-                                .clickable { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) }
-                        )
-                        // Camera badge
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .background(Color.White, CircleShape)
-                                .border(1.5.dp, BrandBlue, CircleShape)
-                                .clickable { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = null, tint = BrandBlue, modifier = Modifier.size(14.dp))
-                        }
-                    }
+                    Image(
+                        painter = painterResource(R.drawable.logo),
+                        contentDescription = "Logo",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .size(90.dp)
+//                            .clip(CircleShape)
+//                            .background(Color.White)
+//                            .border(3.dp, Color.White, CircleShape)
+                    )
 
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(

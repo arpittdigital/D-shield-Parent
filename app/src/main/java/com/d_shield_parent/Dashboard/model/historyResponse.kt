@@ -1,5 +1,7 @@
 package com.d_shield_parent.Dashboard.model
 
+import com.google.gson.annotations.SerializedName
+
 data class historyResponse(
     val success: Boolean,
     val devices: List<Device>
@@ -37,4 +39,24 @@ data class Device(
     val is_deleted: Boolean,
     val created_at: String,
     val updated_at: String
+)
+
+data class TransactionResponse(
+    @SerializedName("success") val success: Boolean,
+    @SerializedName("transactions") val transactions: List<Transaction>
+)
+
+data class Transaction(
+    @SerializedName("id") val id: Int,
+    @SerializedName("code") val code: String,
+    @SerializedName("points") val points: Int,
+    @SerializedName("description") val description: String,
+    @SerializedName("from") val from: String,
+    @SerializedName("date") val date: String,
+    @SerializedName("is_reverted") val isReverted: Int
+)
+
+data class Distributor(
+    @SerializedName("id") val id: Int,
+    @SerializedName("name") val name: String
 )

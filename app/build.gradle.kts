@@ -114,6 +114,8 @@ dependencies {
 
     implementation("com.itextpdf:itext7-core:7.2.5")
 
+    implementation("androidx.compose.material3:material3:1.3.1")
+
     // Room Database
 
     val room_version = "2.7.0"

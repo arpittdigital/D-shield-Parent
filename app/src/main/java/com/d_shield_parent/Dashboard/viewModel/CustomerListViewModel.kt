@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.d_shield_parent.Api.RetrofitClient
-import com.d_shield_parent.Dashboard.History
+//import com.d_shield_parent.Dashboard.History
 import com.d_shield_parent.Dashboard.HistoryRepository
 import com.d_shield_parent.Dashboard.model.RemoveRequest
 import com.d_shield_parent.Dashboard.model.getDeviceResponse
@@ -13,6 +13,7 @@ import com.d_shield_parent.Dashboard.model.updateRequest
 import com.d_shield_parent.Dashboard.model.InstallmentResponse
 import com.d_shield_parent.Dashboard.model.installmentRequest
 import com.d_shield_parent.SharedPreference.shareprefManager
+import com.d_shield_parent.navigation.Routes
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -82,7 +83,8 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
                     val error = response.errorBody()?.string()
                     Log.e(TAG, " Fetch failed: $error")
                     _customerListState.value =
-                        CustomerListState.Error("Server error ${response.code()}")
+                        CustomerListState.Error("Server error ")
+//                        CustomerListState.Error("Server error ${response.code()}")
                 }
 
             } catch (e: Exception) {
@@ -249,23 +251,23 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
                 if (response.isSuccessful) {
                     Log.d(TAG, " Device removed successfully")
 
-                    deviceToDelete?.let { device ->
-                        val currentDate = java.text.SimpleDateFormat(
-                            "dd/MM/yyyy",
-                            java.util.Locale.getDefault()
-                        ).format(java.util.Date())
-
-                        val history = History(
-                            name = device.customer_name,
-                            number = device.customer_phone,
-                            date = currentDate,
-                            imei1 = device.imei1,
-                            action = "Unlocked & Deleted"
-                        )
-
-                      HistoryRepository.addHistory(history)
-                        Log.d(TAG, "Added to history: ${device.customer_name}")
-                    }
+//                    deviceToDelete?.let { device ->
+//                        val currentDate = java.text.SimpleDateFormat(
+//                            "dd/MM/yyyy",
+//                            java.util.Locale.getDefault()
+//                        ).format(java.util.Date())
+//
+////                        val history = Routes.History(
+////                            name = device.customer_name,
+////                            number = device.customer_phone,
+////                            date = currentDate,
+////                            imei1 = device.imei1,
+////                            action = "Unlocked & Deleted"
+////                        )
+//
+//                      HistoryRepository.addHistory(history)
+//                        Log.d(TAG, "Added to history: ${device.customer_name}")
+//                    }
 
                     fetchCustomerList()
                 } else {

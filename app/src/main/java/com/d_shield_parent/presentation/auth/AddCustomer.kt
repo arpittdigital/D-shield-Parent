@@ -4,6 +4,8 @@ import android.Manifest
 import android.app.DatePickerDialog
 import android.content.Context
 import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -56,6 +58,8 @@ import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import java.io.ByteArrayOutputStream
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -64,7 +68,7 @@ import java.util.*
 fun AddCustomerFlow(navController: NavController) {
 
     val viewModel: AddCustomerViewModel = viewModel()
-    val context = LocalContext.current  // ✅ Add this
+    val context = LocalContext.current
 
     //  Add SMS Receiver
     val smsReceiver = remember { SmsBroadcastReceiver() }
@@ -73,7 +77,7 @@ fun AddCustomerFlow(navController: NavController) {
     DisposableEffect(Unit) {
         val filter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
 
-        // ✅ Use ContextCompat — fixes lint warning on all API levels
+        // Use ContextCompat — fixes lint warning on all API levels
         ContextCompat.registerReceiver(
             context,
             smsReceiver,
@@ -188,7 +192,7 @@ fun AddCustomerFlow(navController: NavController) {
                 address = address, onAddressChange = { address = it },
                 pancard = pancard, onPanCardChange = { pancard = it },
                 alternate = alternate, onAlternateChange = { alternate = it },
-                vm = viewModel,             // ✅ Pass AddCustomerViewModel
+                vm = viewModel,             //  Pass AddCustomerViewModel
                 onNext = { currentPage = 1 }
             )
             1 -> ProductDetailsPage(
@@ -213,7 +217,9 @@ fun AddCustomerFlow(navController: NavController) {
                 { currentPage = 2 }
             )
             2 -> UploadDocumentPage(
-                name, mobile, email,
+                name = name,
+                mobile = viewModel.mobile,
+                email = email,
                 aadharCard, address, pancard, alternate, productName, imei1, imei2, totalAmount, emiDay,
                 loanAmount, loanFrequency, rateOfInterest, agreementDate, firstInstallment,
                 downPayment, billingInvoice, totalInstallment, emiDates, monthlyInstallment,
@@ -284,12 +290,12 @@ fun CustomerDetailsPage(
     address: String, onAddressChange: (String) -> Unit,
     pancard: String, onPanCardChange: (String) -> Unit,
     alternate: String, onAlternateChange: (String) -> Unit,
-    vm: AddCustomerViewModel,   // ✅ Pass AddCustomerViewModel directly
+    vm: AddCustomerViewModel,   // Pass AddCustomerViewModel directly
     onNext: () -> Unit
 ) {
     var showValidationError by remember { mutableStateOf(false) }
     var validationMessage by remember { mutableStateOf("") }
-    // ❌ Removed: val vm: OtpViewModel = viewModel()
+    // Removed: val vm: OtpViewModel = viewModel()
 
     fun validateFields(): Boolean {
         return when {
@@ -336,8 +342,8 @@ fun CustomerDetailsPage(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ✅ Mobile from AddCustomerViewModel
-            // ✅ Mobile field — locked after OTP verified
+            // Mobile from AddCustomerViewModel
+            // Mobile field — locked after OTP verified
             CustomerTextField(
                 label = "Mobile Number *",
                 value = vm.mobile,
@@ -345,14 +351,14 @@ fun CustomerDetailsPage(
                 leadingIcon = Icons.Default.Phone,
                 readOnly = vm.isOtpVerified,
                 onValueChange = {
-                    if (!vm.isOtpVerified) vm.mobile = it  // ✅ Lock field after verified
+                    if (!vm.isOtpVerified) vm.mobile = it  // Lock field after verified
                 },
-                enabled = !vm.isOtpVerified  // ✅ Disable field after verified
+                enabled = !vm.isOtpVerified  // Disable field after verified
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
-// ✅ Error message
+// Error message
             vm.errorMessage?.let {
                 Text(
                     text = it,
@@ -362,7 +368,7 @@ fun CustomerDetailsPage(
                 )
             }
 
-// ✅ Hide entire OTP section after verified
+// Hide entire OTP section after verified
             if (!vm.isOtpVerified) {
 
                 // Send OTP Button
@@ -412,7 +418,7 @@ fun CustomerDetailsPage(
                 }
 
             } else {
-                // ✅ Show verified badge with locked icon instead of OTP section
+                // Show verified badge with locked icon instead of OTP section
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -1022,7 +1028,8 @@ fun ProductDetailsPage(
 
             Spacer(modifier = Modifier.height(30.dp))
             Button(
-                onClick = { if (productvalidateFields()) onSubmit() else showValidationError = true },
+               // onClick = { if (productvalidateFields()) onSubmit() else showValidationError = true },
+                onClick = { onSubmit() },
                 modifier = Modifier.fillMaxWidth().height(55.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFff5722))
@@ -1047,6 +1054,25 @@ fun ProductDetailsPage(
     }
 }
 
+
+fun compressImageUri(context: Context, uri: Uri, maxSizeKb: Int = 1024): Uri {
+    val inputStream = context.contentResolver.openInputStream(uri)
+    val originalBitmap = BitmapFactory.decodeStream(inputStream)
+
+    var quality = 90
+    var outputBytes: ByteArray
+
+    do {
+        val outputStream = ByteArrayOutputStream()
+        originalBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+        outputBytes = outputStream.toByteArray()
+        quality -= 10
+    } while (outputBytes.size > maxSizeKb * 1024 && quality > 10)
+
+    val compressedFile = File(context.cacheDir, "compressed_${System.currentTimeMillis()}.jpg")
+    compressedFile.writeBytes(outputBytes)
+    return Uri.fromFile(compressedFile)
+}
 // ─── Page 3: Upload Documents ─────────────────────────────────────────────────
 
 @Composable
@@ -1064,13 +1090,77 @@ fun UploadDocumentPage(
     val context = LocalContext.current
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+    var showSizeWarningDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.initializeUris(context) }
 
+    val compressedPhoto = viewModel.photo?.let { compressImageUri(context, it) }
+    val compressedAadhaarFront = viewModel.aadhaarFront?.let { compressImageUri(context, it) }
+    val compressedAadhaarBack = viewModel.aadhaarBack?.let { compressImageUri(context, it) }
+    val compressedPan = viewModel.panCard?.let { compressImageUri(context, it) }
+    // Camera launchers
     val cameraPhoto = rememberCameraLauncher(viewModel.photoUri) { viewModel.photo = it }
     val cameraAadhaarFront = rememberCameraLauncher(viewModel.aadhaarFrontUri) { viewModel.aadhaarFront = it }
     val cameraAadhaarBack = rememberCameraLauncher(viewModel.aadhaarBackUri) { viewModel.aadhaarBack = it }
     val cameraPan = rememberCameraLauncher(viewModel.panCardUri) { viewModel.panCard = it }
+
+    // Gallery launchers
+    val galleryPhoto = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { viewModel.photo = it }
+    val galleryAadhaarFront = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { viewModel.aadhaarFront = it }
+    val galleryAadhaarBack = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { viewModel.aadhaarBack = it }
+    val galleryPan = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { viewModel.panCard = it }
+
+    fun submitCustomer() {
+        customerviewModel.addCustomerToApi(
+            photoUri = compressedPhoto,
+            aadhaarFrontUri = compressedAadhaarFront,
+            aadhaarBackUri = compressedAadhaarBack,
+            panCardUri = compressedPan,
+            name = name, mobile = mobile, email = email, address = address,
+            aadharCard = aadharCard, pancard = pancard, alternate = alternate,
+            imei1 = imei1, imei2 = imei2, productName = productName, serialNumber = "",
+            totalAmount = totalAmount, loanstartdate = firstInstallment,
+            loanAmount = loanAmount, downPayment = downPayment,
+            monthlyInstallment = monthlyInstallment, totalInstallment = totalInstallment,
+            rateOfInterest = rateOfInterest, agreementDate = agreementDate,
+            billingInvoice = billingInvoice, emiday = emiDay, retailerId = 1,
+            signatureFilePath = viewModel.signaturePath,
+            onSuccess = { responseDeviceId ->
+                Log.d("AddCustomer", "API Success - Device ID: $responseDeviceId")
+                val emiDatesString = emiDates.joinToString(",")
+                val paymentStatusString = List(emiDates.size) { "false" }.joinToString(",")
+                try {
+                    val customer = addCustomerList(
+                        id = 0, name, mobile, email, aadharCard, address, pancard,
+                        alternate, productName, imei1, imei2, loanAmount, loanFrequency,
+                        rateOfInterest, agreementDate, firstInstallment, downPayment,
+                        billingInvoice, totalInstallment, emiDatesString, paymentStatusString,
+                        viewModel.photo?.toString(), viewModel.aadhaarFront?.toString(),
+                        viewModel.aadhaarBack?.toString(), viewModel.panCard?.toString(),
+                        viewModel.signaturePath
+                    )
+                    customerviewModel.addCustomer(customer)
+                    Log.d("AddCustomer", "Room DB save completed")
+                    navController.navigate("qr_screen/$responseDeviceId") {
+                        popUpTo(Routes.AddCustomer.route) { inclusive = true }
+                    }
+                } catch (e: Exception) {
+                    Log.e("AddCustomer", "Error saving to Room: ${e.message}", e)
+                    errorMessage = "Saved to server but local save failed"
+                    showErrorDialog = true
+                }
+            },
+            onError = { error ->
+                errorMessage = when {
+                    error.contains("413") -> "Files are too large to upload. Please use smaller images."
+                    error.contains("timeout", ignoreCase = true) -> "Connection timed out. Please try again."
+                    error.contains("500") -> "Server error. Please try again later."
+                    else -> error
+                }
+                showErrorDialog = true
+            }
+        )
+    }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Image(
@@ -1080,68 +1170,73 @@ fun UploadDocumentPage(
         )
         Spacer(Modifier.height(15.dp))
         Column(Modifier.padding(horizontal = 20.dp)) {
-            Text("Upload Required Documents", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.padding(bottom = 16.dp))
+            Text(
+                "Upload Required Documents",
+                fontSize = 20.sp, fontWeight = FontWeight.Bold,
+                color = Color.Black, modifier = Modifier.padding(bottom = 16.dp)
+            )
 
-            DocumentUploadCard("Customer Photo", viewModel.photo) { viewModel.photoUri?.let { cameraPhoto.launch(it) } }
+            DocumentUploadCard(
+                label = "Customer Photo",
+                uri = viewModel.photo,
+                onCamera = { viewModel.photoUri?.let { cameraPhoto.launch(it) } },
+                onGallery = { galleryPhoto.launch("image/*") }
+            )
             Spacer(Modifier.height(15.dp))
-            DocumentUploadCard("Aadhaar Card Front", viewModel.aadhaarFront) { viewModel.aadhaarFrontUri?.let { cameraAadhaarFront.launch(it) } }
+            DocumentUploadCard(
+                label = "Aadhaar Card Front",
+                uri = viewModel.aadhaarFront,
+                onCamera = { viewModel.aadhaarFrontUri?.let { cameraAadhaarFront.launch(it) } },
+                onGallery = { galleryAadhaarFront.launch("image/*") }
+            )
             Spacer(Modifier.height(15.dp))
-            DocumentUploadCard("Aadhaar Card Back", viewModel.aadhaarBack) { viewModel.aadhaarBackUri?.let { cameraAadhaarBack.launch(it) } }
+            DocumentUploadCard(
+                label = "Aadhaar Card Back",
+                uri = viewModel.aadhaarBack,
+                onCamera = { viewModel.aadhaarBackUri?.let { cameraAadhaarBack.launch(it) } },
+                onGallery = { galleryAadhaarBack.launch("image/*") }
+            )
             Spacer(Modifier.height(15.dp))
-            DocumentUploadCard("PAN Card", viewModel.panCard) { viewModel.panCardUri?.let { cameraPan.launch(it) } }
+            DocumentUploadCard(
+                label = "PAN Card",
+                uri = viewModel.panCard,
+                onCamera = { viewModel.panCardUri?.let { cameraPan.launch(it) } },
+                onGallery = { galleryPan.launch("image/*") }
+            )
             Spacer(Modifier.height(20.dp))
 
             Text("Customer Signature", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
             Spacer(Modifier.height(10.dp))
-            SignatureBox(modifier = Modifier.fillMaxWidth().height(200.dp), context = context, onDraw = { path -> viewModel.updateSignature(path, context) })
+            SignatureBox(
+                modifier = Modifier.fillMaxWidth().height(200.dp),
+                context = context,
+                onDraw = { path -> viewModel.updateSignature(path, context) }
+            )
             Spacer(Modifier.height(25.dp))
 
             if (customerviewModel.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally), color = Color(0xFFff5722))
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    color = Color(0xFFff5722)
+                )
                 Spacer(Modifier.height(16.dp))
             }
 
             Button(
                 onClick = {
-                    customerviewModel.addCustomerToApi(
-                        name = name, mobile = mobile, email = email, address = address,
-                        aadharCard = aadharCard, pancard = pancard, alternate = alternate,
-                        imei1 = imei1, imei2 = imei2, productName = productName, serialNumber = "",
-                        totalAmount = totalAmount, loanstartdate = firstInstallment,
-                        loanAmount = loanAmount, downPayment = downPayment,
-                        monthlyInstallment = monthlyInstallment, totalInstallment = totalInstallment,
-                        rateOfInterest = rateOfInterest, agreementDate = agreementDate,
-                        billingInvoice = billingInvoice, emiday = emiDay, retailerId = 1,
-                        photoUri = viewModel.photo, aadhaarFrontUri = viewModel.aadhaarFront,
-                        aadhaarBackUri = viewModel.aadhaarBack, panCardUri = viewModel.panCard,
-                        signatureFilePath = viewModel.signaturePath,
-                        onSuccess = { responseDeviceId ->
-                            Log.d("AddCustomer", "API Success - Device ID: $responseDeviceId")
-                            val emiDatesString = emiDates.joinToString(",")
-                            val paymentStatusString = List(emiDates.size) { "false" }.joinToString(",")
-                            try {
-                                val customer = addCustomerList(
-                                    id = 0, name, mobile, email, aadharCard, address, pancard,
-                                    alternate, productName, imei1, imei2, loanAmount, loanFrequency,
-                                    rateOfInterest, agreementDate, firstInstallment, downPayment,
-                                    billingInvoice, totalInstallment, emiDatesString, paymentStatusString,
-                                    viewModel.photo?.toString(), viewModel.aadhaarFront?.toString(),
-                                    viewModel.aadhaarBack?.toString(), viewModel.panCard?.toString(),
-                                    viewModel.signaturePath
-                                )
-                                customerviewModel.addCustomer(customer)
-                                Log.d("AddCustomer", "Room DB save completed")
-                                navController.navigate("qr_screen/$responseDeviceId") {
-                                    popUpTo(Routes.AddCustomer.route) { inclusive = true }
-                                }
-                            } catch (e: Exception) {
-                                Log.e("AddCustomer", "Error saving to Room: ${e.message}", e)
-                                errorMessage = "Saved to server but local save failed: ${e.message}"
-                                showErrorDialog = true
-                            }
-                        },
-                        onError = { error -> errorMessage = error; showErrorDialog = true }
+                    val urisToCheck = listOf(
+                        viewModel.photo, viewModel.aadhaarFront,
+                        viewModel.aadhaarBack, viewModel.panCard
                     )
+                    val oversized = urisToCheck.filterNotNull().any { uri ->
+                        context.contentResolver.openFileDescriptor(uri, "r")
+                            ?.use { it.statSize > 2 * 1024 * 1024 } == true
+                    }
+                    if (oversized) {
+                        showSizeWarningDialog = true
+                    } else {
+                        submitCustomer()
+                    }
                 },
                 modifier = Modifier.fillMaxWidth().height(55.dp),
                 shape = RoundedCornerShape(12.dp),
@@ -1161,17 +1256,49 @@ fun UploadDocumentPage(
         }
     }
 
+    // Error dialog
     if (showErrorDialog) {
         AlertDialog(
             onDismissRequest = { showErrorDialog = false },
             title = { Text("Error") },
             text = { Text(errorMessage) },
             confirmButton = {
-                Button(onClick = { showErrorDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFff5722))) { Text("OK") }
+                Button(
+                    onClick = { showErrorDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFff5722))
+                ) { Text("OK") }
             }
         )
     }
+
+    // File size warning dialog
+//    if (showSizeWarningDialog) {
+//        AlertDialog(
+//            onDismissRequest = { showSizeWarningDialog = false },
+//            title = { Text("File Size Warning") },
+//            text = { Text("One or more files exceed 2MB. Large files may cause upload issues. Do you want to submit anyway?") },
+//            confirmButton = {
+//                Button(
+//                    onClick = {
+//                        showSizeWarningDialog = false
+//                        submitCustomer()
+//                    },
+//                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFff5722))
+//                ) { Text("Submit Anyway") }
+//            },
+//            dismissButton = {
+//                OutlinedButton(onClick = { showSizeWarningDialog = false }) {
+//                    Text("Go Back")
+//                }
+//            }
+//        )
+//    }
 }
+
+@Composable
+fun rememberGalleryLauncher(onResult: (Uri?) -> Unit) =
+    rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { onResult(it) }
+
 
 // ─── Camera Launcher ──────────────────────────────────────────────────────────
 
@@ -1247,17 +1374,22 @@ fun SignatureBox(modifier: Modifier = Modifier, context: Context, onDraw: (Path)
 // ─── Document Upload Card ─────────────────────────────────────────────────────
 
 @Composable
-fun DocumentUploadCard(label: String, imageUri: Uri?, onClick: () -> Unit) {
+fun DocumentUploadCard(label: String, uri: Uri?, onCamera: () -> Unit, onGallery: () -> Unit) {
+    var showOptions by remember { mutableStateOf(false) }
+
     Column {
         Button(
-            onClick = onClick,
+            onClick = { showOptions = true },
             modifier = Modifier.fillMaxWidth().height(70.dp),
             shape = RoundedCornerShape(13.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().height(48.dp)
-                    .background(brush = Brush.linearGradient(colors = listOf(AppColors.PrimaryLight, AppColors.PrimaryDark)), shape = RoundedCornerShape(13.dp))
+                    .background(
+                        brush = Brush.linearGradient(colors = listOf(AppColors.PrimaryLight, AppColors.PrimaryDark)),
+                        shape = RoundedCornerShape(13.dp)
+                    )
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
@@ -1266,12 +1398,84 @@ fun DocumentUploadCard(label: String, imageUri: Uri?, onClick: () -> Unit) {
                 Icon(Icons.Default.CameraAlt, "Capture", tint = Color.White)
             }
         }
-        imageUri?.let {
+
+        // Two option dialog on click
+        if (showOptions) {
+            AlertDialog(
+                onDismissRequest = { showOptions = false },
+                title = { Text("Upload $label") },
+                text = {
+                    Column {
+                        // Camera option
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    showOptions = false
+                                    onCamera()
+                                }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.CameraAlt, "Camera",
+                                tint = Color(0xFFff5722),
+                                modifier = Modifier.size(26.dp)
+                            )
+                            Spacer(Modifier.width(16.dp))
+                            Text("Take Photo", fontSize = 16.sp)
+                        }
+
+                        Divider()
+
+                        // Gallery option
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    showOptions = false
+                                    onGallery()
+                                }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Photo, "Gallery",
+                                tint = Color(0xFFff5722),
+                                modifier = Modifier.size(26.dp)
+                            )
+                            Spacer(Modifier.width(16.dp))
+                            Text("Choose from Gallery", fontSize = 16.sp)
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showOptions = false }) {
+                        Text("Cancel", color = Color(0xFFff5722))
+                    }
+                }
+            )
+        }
+
+        uri?.let {
             Spacer(Modifier.height(10.dp))
-            Card(modifier = Modifier.fillMaxWidth().height(200.dp), shape = RoundedCornerShape(10.dp), elevation = CardDefaults.cardElevation(4.dp)) {
+            Card(
+                modifier = Modifier.fillMaxWidth().height(200.dp),
+                shape = RoundedCornerShape(10.dp),
+                elevation = CardDefaults.cardElevation(4.dp)
+            ) {
                 Box {
-                    Image(rememberAsyncImagePainter(it), "Captured $label", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                    Icon(Icons.Default.CheckCircle, "Uploaded", tint = Color(0xFF4CAF50), modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(32.dp))
+                    Image(
+                        rememberAsyncImagePainter(it), "Captured $label",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    Icon(
+                        Icons.Default.CheckCircle, "Uploaded",
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(32.dp)
+                    )
                 }
             }
         }
