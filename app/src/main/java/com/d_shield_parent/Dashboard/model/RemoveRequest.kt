@@ -8,6 +8,8 @@ data class RemoveRequest(
 )
 
 data class RemoveResponse(
-    val Success: Boolean,
+    @SerializedName("success")
+    val success: Boolean,
+    @SerializedName("message")
     val message: String,
 )

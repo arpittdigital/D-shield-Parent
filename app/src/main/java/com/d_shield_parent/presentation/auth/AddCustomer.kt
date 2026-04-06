@@ -65,7 +65,8 @@ import java.util.*
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun AddCustomerFlow(navController: NavController) {
+fun AddCustomerFlow(navController: NavController,
+                    onCustomerAdded: () -> Unit = {}) {
 
     val viewModel: AddCustomerViewModel = viewModel()
     val context = LocalContext.current
@@ -223,7 +224,8 @@ fun AddCustomerFlow(navController: NavController) {
                 aadharCard, address, pancard, alternate, productName, imei1, imei2, totalAmount, emiDay,
                 loanAmount, loanFrequency, rateOfInterest, agreementDate, firstInstallment,
                 downPayment, billingInvoice, totalInstallment, emiDates, monthlyInstallment,
-                { currentPage = 1 }, navController
+                { currentPage = 1 }, navController,
+                onCustomerAdded = onCustomerAdded
             )
         }
     }
@@ -1085,7 +1087,8 @@ fun UploadDocumentPage(
     emiDates: List<String>, monthlyInstallment: String,
     onBack: () -> Unit, navController: NavController,
     customerviewModel: CustomerViewModel = viewModel(),
-    viewModel: DocumentViewModel = viewModel()
+    viewModel: DocumentViewModel = viewModel(),
+    onCustomerAdded: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var showErrorDialog by remember { mutableStateOf(false) }
@@ -1127,6 +1130,7 @@ fun UploadDocumentPage(
             signatureFilePath = viewModel.signaturePath,
             onSuccess = { responseDeviceId ->
                 Log.d("AddCustomer", "API Success - Device ID: $responseDeviceId")
+                onCustomerAdded()
                 val emiDatesString = emiDates.joinToString(",")
                 val paymentStatusString = List(emiDates.size) { "false" }.joinToString(",")
                 try {

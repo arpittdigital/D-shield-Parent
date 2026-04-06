@@ -42,6 +42,8 @@ fun ListScreen(
     viewModel: CustomerListViewModel = viewModel()
 ) {
     val customerListState by viewModel.customerListState.collectAsState()
+    var searchQuery by remember { mutableStateOf("") }
+
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -71,24 +73,12 @@ fun ListScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-//                IconButton(onClick = { navController.popBackStack() }) {
-//                    Icon(
-//                        imageVector = Icons.Default.ArrowBackIos,
-//                        tint = Color.Black,
-//                        contentDescription = "Back"
-//                    )
-//                }
-//                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    "Customer List",
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    color = Color.Black,
-                    fontWeight = FontWeight.W800,
-                    fontSize = 21.sp,
-                )
-            }
-
+            Text(
+                "Customer List",
+                color = Color.Black,
+                fontWeight = FontWeight.W800,
+                fontSize = 21.sp,
+            )
             IconButton(onClick = { viewModel.refreshList() }) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
@@ -98,23 +88,56 @@ fun ListScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        // Search Box
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            placeholder = {
+                Text("Search by name, phone or IMEI...", color = Color.Gray, fontSize = 14.sp)
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = Color.Gray
+                )
+            },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { searchQuery = "" }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Clear",
+                            tint = Color.Gray
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color.Black,
+                unfocusedBorderColor = Color.LightGray,
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                cursorColor = Color.Black
+            )
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         when (val state = customerListState) {
             is CustomerListState.Idle -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("Ready to load", color = Color.Gray)
                 }
             }
 
             is CustomerListState.Loading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator(color = Color.Black)
                         Spacer(modifier = Modifier.height(16.dp))
@@ -127,30 +150,56 @@ fun ListScreen(
                 val devices = state.data.devices
                 Log.d("ListScreen", "Devices count: ${devices.size}")
 
+                // Filter based on search query
+                val filteredDevices = remember(searchQuery, devices) {
+                    if (searchQuery.isEmpty()) {
+                        devices
+                    } else {
+                        val query = searchQuery.trim().lowercase()
+                        devices.filter { device ->
+                            device.customerName?.lowercase()?.contains(query) == true ||
+                                    device.customerPhone?.lowercase()?.contains(query) == true ||
+                                    device.imei1?.lowercase()?.contains(query) == true ||
+                                    device.imei2?.lowercase()?.contains(query) == true
+                        }
+                    }
+                }
+
                 if (devices.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("No customers found", fontSize = 18.sp, color = Color.Gray)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Add your first customer!", fontSize = 14.sp, color = Color.Gray)
+                        }
+                    }
+                } else if (filteredDevices.isEmpty()) {
+                    // No results for search query
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.SearchOff,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                "No customers found",
-                                fontSize = 18.sp,
+                                "No results for \"$searchQuery\"",
+                                fontSize = 16.sp,
                                 color = Color.Gray
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "Add your first customer!",
-                                fontSize = 14.sp,
-                                color = Color.Gray
+                                "Try searching by name, phone or IMEI",
+                                fontSize = 13.sp,
+                                color = Color.LightGray
                             )
                         }
                     }
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(devices) { device ->
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(filteredDevices) { device ->
                             CustomerItem(device = device, navController = navController)
                         }
                     }
@@ -158,10 +207,7 @@ fun ListScreen(
             }
 
             is CustomerListState.Error -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             "Error loading customers",
@@ -170,17 +216,11 @@ fun ListScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            state.message,
-                            fontSize = 14.sp,
-                            color = Color.Gray
-                        )
+                        Text(state.message, fontSize = 14.sp, color = Color.Gray)
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = { viewModel.refreshList() },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Black
-                            )
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
                         ) {
                             Text("Retry")
                         }
@@ -233,7 +273,7 @@ fun CustomerItem(
                 // Left - Avatar + Info
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f) // ✅ prevents arrow from being pushed off
+                    modifier = Modifier.weight(1f)
                 ) {
                     // Avatar Circle
                     Box(
@@ -252,7 +292,7 @@ fun CustomerItem(
 
                     Spacer(modifier = Modifier.width(12.dp))
 
-                    Column {
+                    Column {  // ← Column starts here
                         Text(
                             text = device.customerName ?: "N/A",
                             fontSize = 16.sp,
@@ -287,57 +327,18 @@ fun CustomerItem(
                             }
                         }
 
-                        // Address
-                        device.customerAddress?.let { addr ->
-                            if (addr.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.LocationOn,
-                                        contentDescription = null,
-                                        tint = Color.Gray,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(3.dp))
-                                    Text(
-                                        text = addr,
-                                        fontSize = 12.sp,
-                                        color = Color.Gray,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-                        }
-
-                        // Signature
-                        device.signature?.let { sig ->
-                            if (sig.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Edit,
-                                        contentDescription = null,
-                                        tint = Color(0xFF4CAF50),
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(3.dp))
-                                    Text(
-                                        text = "Signature collected",
-                                        fontSize = 12.sp,
-                                        color = Color(0xFF4CAF50)
-                                    )
-                                }
-                            }
-                        }
-
                         Spacer(modifier = Modifier.height(4.dp))
-                        // Status Badge
+
+                        // Status Badge ← now INSIDE Column
                         Box(
                             modifier = Modifier
                                 .background(
-                                    color = if (device.status?.equals("active", ignoreCase = true) == true)
-                                        Color(0xFFE8F5E9) else Color(0xFFFFEBEE),
+                                    color = when (device.status?.lowercase()) {
+                                        "active", "unlocked" -> Color(0xFFE8F5E9)
+                                        "lock", "locked"     -> Color(0xFFFFEBEE)
+                                        "provisioning"       -> Color(0xFFFFF3E0)
+                                        else                 -> Color(0xFFF5F5F5)
+                                    },
                                     shape = RoundedCornerShape(4.dp)
                                 )
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
@@ -345,12 +346,16 @@ fun CustomerItem(
                             Text(
                                 text = device.status?.replaceFirstChar { it.uppercase() } ?: "N/A",
                                 fontSize = 11.sp,
-                                color = if (device.status?.equals("active", ignoreCase = true) == true)
-                                    Color(0xFF4CAF50) else Color(0xFFD32F2F),
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                color = when (device.status?.lowercase()) {
+                                    "active", "unlocked" -> Color(0xFF4CAF50)
+                                    "lock", "locked"     -> Color(0xFFD32F2F)
+                                    "provisioning"       -> Color(0xFFFF9800)
+                                    else                 -> Color(0xFF9E9E9E)
+                                }
                             )
                         }
-                    } // end Column
+                    } // ← Column ends here
                 } // end inner Row
 
                 // Right - Arrow
@@ -362,8 +367,8 @@ fun CustomerItem(
                 )
             } // end outer Row
         } // end Card
-    } // end Box
-}
+    }
+} // end Box
 @Composable
 fun EMIInstallmentCard(
     installment: InstallmentItem,
@@ -663,12 +668,14 @@ fun CustomerDetailScreen(
                     InfoRow("IMEI 2", device.imei2 ?: "N/A")
                     InfoRow("Serial No.", device.serialNumber ?: "N/A")
                     InfoRow("MDM Status", device.mdmStatus ?: "N/A")
+                    InfoRow("Signature", device.signature ?: "N/A")
                 }
             }
 
             // ── Loan Info ──
             item {
                 SectionCard(title = "Loan Details") {
+                    InfoRow("Address", device.customerAddress ?: "N/A")
                     InfoRow("Loan Amount", "₹${device.loanAmount ?: "N/A"}")
                     InfoRow("Down Payment", "₹${device.downPayment ?: "N/A"}")
                     InfoRow("Monthly EMI", "₹${device.monthlyInstallment ?: "N/A"}")

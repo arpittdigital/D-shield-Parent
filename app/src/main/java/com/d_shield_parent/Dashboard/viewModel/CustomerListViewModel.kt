@@ -224,15 +224,11 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun removeDevice(imei1: String) {
+    fun removeDevice(imei1: String, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
-            val currentState = _customerListState.value
-            val deviceToDelete = if (currentState is CustomerListState.Success) {
-                currentState.data.devices.find { it.imei1 == imei1 }
-            } else null
+            Log.d(TAG, "Attempting to remove device with IMEI1: '$imei1'") // ← add this
 
             _customerListState.value = CustomerListState.Loading
-            Log.d(TAG, "🗑️ Removing device IMEI1=$imei1")
 
             try {
                 val token = shareprefManager.getToken()
@@ -243,42 +239,27 @@ class CustomerListViewModel(application: Application) : AndroidViewModel(applica
                     return@launch
                 }
 
+                Log.d(TAG, "Sending RemoveRequest with IMEI1: '$imei1'") // ← add this
+
                 val response = RetrofitClient.instance.removeDevice(
                     token = "Bearer $token",
                     removeRequest = RemoveRequest(imei1)
                 )
 
                 if (response.isSuccessful) {
-                    Log.d(TAG, " Device removed successfully")
-
-//                    deviceToDelete?.let { device ->
-//                        val currentDate = java.text.SimpleDateFormat(
-//                            "dd/MM/yyyy",
-//                            java.util.Locale.getDefault()
-//                        ).format(java.util.Date())
-//
-////                        val history = Routes.History(
-////                            name = device.customer_name,
-////                            number = device.customer_phone,
-////                            date = currentDate,
-////                            imei1 = device.imei1,
-////                            action = "Unlocked & Deleted"
-////                        )
-//
-//                      HistoryRepository.addHistory(history)
-//                        Log.d(TAG, "Added to history: ${device.customer_name}")
-//                    }
-
+                    val body = response.body()
+                    Log.d(TAG, "Remove response: ${body?.success} - ${body?.message}") // ← add this
                     fetchCustomerList()
+                    onSuccess()
                 } else {
                     val error = response.errorBody()?.string()
-                    Log.e(TAG, "Remove failed: $error")
+                    Log.e(TAG, "Remove failed with code ${response.code()}: $error") // ← add this
                     _customerListState.value =
                         CustomerListState.Error("Failed to remove device")
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, " Exception", e)
+                Log.e(TAG, "Exception in removeDevice", e)
                 _customerListState.value =
                     CustomerListState.Error(e.localizedMessage ?: "Something went wrong")
             }

@@ -54,7 +54,7 @@ data class DeviceModel(
     @SerializedName("serial_number")
     val serialNumber: String?,
     @SerializedName("device_info")
-    val deviceInfo: String?,
+    val deviceInfo: JsonElement?,
     @SerializedName("loan_amount")
     val loanAmount: String?,
     @SerializedName("down_payment")
